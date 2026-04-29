@@ -25,3 +25,4 @@ export * from './KnowledgeSystemPanel';
 export * from './StartupGeneratorPanel';
 export * from './ReputationSystemPanel';
 export * from './ModArchitecturePanel';
+export * from './MultiAgentPanel';

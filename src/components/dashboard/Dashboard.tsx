@@ -36,6 +36,7 @@ import {
   ReputationSystemPanel,
   ModArchitecturePanel,
   StartupGeneratorPanel,
+  MultiAgentPanel,
 } from '@/components/panels';
 
 export function Dashboard() {
@@ -214,6 +215,7 @@ function PanelContent({ panel }: { panel: string }) {
     mods: <ModArchitecturePanel />,
     python: <PythonOperationalPanel />,
     startup: <StartupGeneratorPanel />,
+    multiagent: <MultiAgentPanel />,
     
     // Legacy/alternate names
     messages: <ChatPanel />,

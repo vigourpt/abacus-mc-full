@@ -61,6 +61,7 @@ const navSections: NavSection[] = [
       { id: 'hiring', icon: '💼', label: 'Hiring' },
       { id: 'security', icon: '🔒', label: 'Security' },
       { id: 'analytics', icon: '📈', label: 'Analytics' },
+      { id: 'multiagent', icon: '🌐', label: 'Multi-Agent' },
       { id: 'gateways', icon: '🔌', label: 'Gateways' },
       { id: 'settings', icon: '⚙️', label: 'Settings' },
     ],
