@@ -18,3 +18,4 @@ export * from './SettingsPanel';
 export * from './HiringPanel';
 export * from './AgentVisualizerPanel';
 export * from './PipelinePanel';
+export * from './OrgChartPanel';

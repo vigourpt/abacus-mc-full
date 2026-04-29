@@ -29,6 +29,7 @@ import {
   HiringPanel,
   AgentVisualizerPanel,
   PipelinePanel,
+  OrgChartPanel,
 } from '@/components/panels';
 
 export function Dashboard() {
@@ -200,6 +201,7 @@ function PanelContent({ panel }: { panel: string }) {
     gateways: <GatewaysPanel />,
     settings: <SettingsPanel />,
     hiring: <HiringPanel />,
+    orgchart: <OrgChartPanel />,
     
     // Legacy/alternate names
     messages: <ChatPanel />,
