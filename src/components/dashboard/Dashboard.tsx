@@ -35,6 +35,7 @@ import {
   KnowledgeSystemPanel,
   ReputationSystemPanel,
   ModArchitecturePanel,
+  StartupGeneratorPanel,
 } from '@/components/panels';
 
 export function Dashboard() {
@@ -212,6 +213,7 @@ function PanelContent({ panel }: { panel: string }) {
     reputation: <ReputationSystemPanel />,
     mods: <ModArchitecturePanel />,
     python: <PythonOperationalPanel />,
+    startup: <StartupGeneratorPanel />,
     
     // Legacy/alternate names
     messages: <ChatPanel />,

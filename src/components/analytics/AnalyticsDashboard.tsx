@@ -110,7 +110,7 @@ export function AnalyticsDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500"></div>
       </div>
     );
   }
@@ -137,7 +137,7 @@ export function AnalyticsDashboard() {
         <h2 className="text-2xl font-bold text-white">Analytics Dashboard</h2>
         <button
           onClick={fetchAnalytics}
-          className="px-4 py-2 bg-primary-600 hover:bg-primary-700 rounded-lg text-sm font-medium transition-colors"
+          className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded-lg text-sm font-medium transition-colors"
         >
           🔄 Refresh
         </button>
@@ -152,7 +152,7 @@ export function AnalyticsDashboard() {
             className={cn(
               'px-4 py-2 rounded-t-lg text-sm font-medium transition-colors',
               activeTab === tab.id
-                ? 'bg-gray-800 text-white border-b-2 border-primary-500'
+                ? 'bg-gray-800 text-white border-b-2 border-cyan-500'
                 : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
             )}
           >

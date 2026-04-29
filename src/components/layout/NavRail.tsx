@@ -24,6 +24,7 @@ const navSections: NavSection[] = [
       { id: 'orgchart', icon: '🏢', label: 'Org Chart' },
       { id: 'knowledge', icon: '🧠', label: 'Knowledge' },
       { id: 'reputation', icon: '⭐', label: 'Reputation' },
+      { id: 'startup', icon: '🚀', label: 'Startup Gen' },
       { id: 'mods', icon: '🧩', label: 'Mods' },
       { id: 'tasks', icon: '📋', label: 'Tasks' },
       { id: 'pipeline', icon: '🔄', label: 'Pipeline' },

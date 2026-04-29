@@ -5,6 +5,7 @@ import { useAppStore } from '@/store';
 import { Dashboard } from '@/components/dashboard/Dashboard';
 import { NavRail } from '@/components/layout/NavRail';
 import { HeaderBar } from '@/components/layout/HeaderBar';
+import { AuthCheck } from '@/components/AuthCheck';
 
 export default function Home() {
   const { setAgents, setTasks, setLoading, setGatewayConnection } = useAppStore();
@@ -79,14 +80,16 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-dvh md:h-screen bg-gray-900 overflow-hidden">
-      <NavRail />
-      <div className="flex-1 flex flex-col overflow-hidden w-full min-w-0">
-        <HeaderBar />
-        <main className="flex-1 overflow-auto md:overflow-auto">
-          <Dashboard />
-        </main>
+    <AuthCheck>
+      <div className="flex h-dvh md:h-screen bg-gray-900 overflow-hidden">
+        <NavRail />
+        <div className="flex-1 flex flex-col overflow-hidden w-full min-w-0">
+          <HeaderBar />
+          <main className="flex-1 overflow-auto md:overflow-auto">
+            <Dashboard />
+          </main>
+        </div>
       </div>
-    </div>
+    </AuthCheck>
   );
 }
