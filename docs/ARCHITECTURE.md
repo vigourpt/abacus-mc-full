@@ -40,7 +40,7 @@ This document describes the system architecture of The Autonomous AI Startup, in
 │                              ▼                                          │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
 │  │                    OpenClaw Gateway                              │   │
-│  │                ws://127.0.0.1:18789 (v3)                        │   │
+│  │                ws://127.0.0.1:45397 (v3)                        │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -236,9 +236,10 @@ interface AppState {
 
 **Location:** `src/lib/websocket.ts`, `src/lib/device-identity.ts`
 
-- **WebSocket Client:** Protocol v3 connection to OpenClaw Gateway
+- **WebSocket Client:** Protocol v3 connection to OpenClaw Gateway (Mission Control UI defaults to port `45397`)
 - **Device Identity:** Ed25519 key pair for secure authentication
 - **Agent Sync:** Bidirectional sync with OpenClaw configuration
+- **Operational Layer Connector:** Separate Python connector uses HTTP endpoint mode (default `http://localhost:8080`) for task execution workloads
 
 ## Data Flow
 

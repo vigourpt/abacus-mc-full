@@ -21,8 +21,8 @@ Complete guide to installing, configuring, and deploying The Autonomous AI Start
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/vigourpt/The-Autonomous-AI-Startup-Architecture.git
-cd The-Autonomous-AI-Startup-Architecture
+git clone https://github.com/vigourpt/abacus-mc-full.git
+cd abacus-mc-full
 ```
 
 ### 2. Install Dependencies
@@ -179,7 +179,7 @@ openclaw status
 ```bash
 # In .env
 OPENCLAW_GATEWAY_HOST=127.0.0.1     # or your OpenClaw host IP
-OPENCLAW_GATEWAY_PORT=18789
+OPENCLAW_GATEWAY_PORT=45397
 OPENCLAW_CONFIG_PATH=~/.openclaw/openclaw.json
 OPENCLAW_STATE_DIR=~/.openclaw
 ```
@@ -263,9 +263,7 @@ docker compose up -d --build
 curl http://localhost:3000/api/system/health
 
 # 4. Seed initial agents (first time only)
-docker exec mission-control node -e "
-  require('./scripts/seed-agents.ts')
-" 2>/dev/null || echo "Agents may need manual seeding"
+docker exec mission-control pnpm exec tsx scripts/seed-agents.ts
 
 # 5. View logs
 docker compose logs -f
@@ -304,7 +302,7 @@ Or use `network_mode: host` in docker-compose.yml.
 ```bash
 # In .env
 OPENCLAW_GATEWAY_HOST=openclaw.your-server.com
-OPENCLAW_GATEWAY_PORT=18789
+OPENCLAW_GATEWAY_PORT=45397
 OPENCLAW_GATEWAY_TOKEN=your-auth-token
 ```
 
@@ -353,57 +351,86 @@ vercel
 ### System Endpoints
 
 ```
-GET  /api/system/health     # Health check (full)
-GET  /api/system/ready       # Readiness probe
-GET  /api/system/env         # Environment status
+GET  /api/system/health              # Health check (full)
+GET  /api/system/ready               # Readiness probe
+GET  /api/system/env                 # Environment status
 ```
 
 ### Agent Endpoints
 
 ```
-GET  /api/agents             # List all agents
-POST /api/agents             # Create new agent
-POST /api/agents/sync        # Sync agents from workspace/OpenClaw config
-POST /api/agents/import      # Import agents from external sources
+GET  /api/agents                     # List all agents
+POST /api/agents                     # Create new agent
+POST /api/agents/sync                # Sync agents from workspace/OpenClaw config
+GET  /api/agents/import              # List importable divisions + import history
+POST /api/agents/import              # Import agents from external sources
 ```
 
 ### Task Endpoints
 
 ```
-GET  /api/tasks              # List tasks (optional: ?status=...&assigned_to=...)
-POST /api/tasks              # Create new task
-GET  /api/tasks/queue?agent= # Poll next task for an agent
+GET  /api/tasks                      # List tasks (optional: ?status=...&assigned_to=...)
+POST /api/tasks                      # Create new task
+GET  /api/tasks/queue?agent=<id>     # Poll next task for an agent
+GET  /api/tasks/process              # Worker processing status
+POST /api/tasks/process              # Trigger task processing loop
 ```
 
 ### OpenClaw Endpoints
 
 ```
-POST   /api/openclaw/connect    # Connect to OpenClaw gateway
-DELETE /api/openclaw/connect    # Disconnect from gateway
-GET    /api/openclaw/status     # Connection status + stats
-POST   /api/openclaw/sync       # Sync agents (push/pull/bidirectional)
-GET    /api/openclaw/channels   # List channels
-POST   /api/openclaw/channels   # Create/update channel
-DELETE /api/openclaw/channels   # Remove channel
-PATCH  /api/openclaw/channels   # Map/unmap agents to channels
-POST   /api/openclaw/send       # Send message via channel
+POST   /api/openclaw/connect         # Connect to OpenClaw gateway
+DELETE /api/openclaw/connect         # Disconnect from gateway
+GET    /api/openclaw/status          # Connection status + stats
+POST   /api/openclaw/sync            # Sync agents (push/pull/bidirectional)
+GET    /api/openclaw/channels        # List channels
+POST   /api/openclaw/channels        # Create/update channel
+DELETE /api/openclaw/channels        # Remove channel
+PATCH  /api/openclaw/channels        # Map/unmap agents to channels
+POST   /api/openclaw/send            # Send message via channel
+GET    /api/openclaw/resources       # List gateway resources
+POST   /api/openclaw/resources       # Upsert gateway resources
 ```
 
 ### Gateway Endpoints
 
 ```
-GET  /api/gateways           # List gateway connections
-POST /api/gateways           # Add gateway connection
+GET  /api/gateways                   # List gateway connections
+POST /api/gateways                   # Add gateway connection
+POST /api/gateways/auto-connect      # Auto-connect using env/OpenClaw config
+```
+
+### Hiring & Startup Endpoints
+
+```
+GET  /api/hiring                     # List pending hiring requests
+POST /api/hiring                     # Create hiring request
+POST /api/hiring/approve             # Approve hiring request
+POST /api/hiring/reject              # Reject hiring request
+GET  /api/startup/generate           # Startup generator status
+POST /api/startup/generate           # Generate startup from idea
+```
+
+### Activity, Webhook, and Realtime Endpoints
+
+```
+GET    /api/activity                 # List activity feed entries
+POST   /api/activity                 # Create activity event
+GET    /api/webhooks                 # List webhooks
+POST   /api/webhooks                 # Create webhook
+DELETE /api/webhooks?id=<id>         # Delete webhook
+GET    /api/ws                       # WebSocket upgrade endpoint
 ```
 
 ### Analytics Endpoints
 
 ```
-GET /api/analytics/agents            # Agent analytics
-GET /api/analytics/tasks             # Task analytics
-GET /api/analytics/performance       # Performance metrics
-GET /api/analytics/system            # System analytics
-GET /api/analytics/agent-performance # Per-agent performance
+GET  /api/analytics/agents           # Agent analytics
+GET  /api/analytics/tasks            # Task analytics
+GET  /api/analytics/performance      # Performance metrics
+GET  /api/analytics/system           # System analytics snapshot
+POST /api/analytics/system           # Force refresh analytics snapshot
+GET  /api/analytics/agent-performance # Per-agent performance
 ```
 
 ---

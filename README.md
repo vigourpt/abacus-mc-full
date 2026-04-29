@@ -81,8 +81,8 @@ The Autonomous AI Startup Architecture is a production-ready, multi-agent orches
 
 ```bash
 # Clone the repository
-git clone https://github.com/vigourpt/The-Autonomous-AI-Startup-Architecture.git
-cd The-Autonomous-AI-Startup-Architecture
+git clone https://github.com/vigourpt/abacus-mc-full.git
+cd abacus-mc-full
 
 # Install dependencies
 pnpm install
@@ -107,8 +107,8 @@ The fastest way to get the full stack running:
 
 ```bash
 # Clone the repository
-git clone https://github.com/vigourpt/The-Autonomous-AI-Startup-Architecture.git
-cd The-Autonomous-AI-Startup-Architecture
+git clone https://github.com/vigourpt/abacus-mc-full.git
+cd abacus-mc-full
 
 # Configure environment
 cp .env.example .env

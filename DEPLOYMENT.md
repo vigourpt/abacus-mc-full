@@ -159,8 +159,8 @@ This starts both:
 
 1. **SSH into your VPS** and clone the repository:
    ```bash
-   git clone https://github.com/vigourpt/The-Autonomous-AI-Startup-Architecture.git
-   cd The-Autonomous-AI-Startup-Architecture
+   git clone https://github.com/vigourpt/abacus-mc-full.git
+   cd abacus-mc-full
    ```
 
 2. **Create environment file:**
