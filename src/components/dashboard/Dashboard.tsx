@@ -31,6 +31,10 @@ import {
   PipelinePanel,
   OrgChartPanel,
   ThreadMessagingPanel,
+  PythonOperationalPanel,
+  KnowledgeSystemPanel,
+  ReputationSystemPanel,
+  ModArchitecturePanel,
 } from '@/components/panels';
 
 export function Dashboard() {
@@ -204,6 +208,10 @@ function PanelContent({ panel }: { panel: string }) {
     settings: <SettingsPanel />,
     hiring: <HiringPanel />,
     orgchart: <OrgChartPanel />,
+    knowledge: <KnowledgeSystemPanel />,
+    reputation: <ReputationSystemPanel />,
+    mods: <ModArchitecturePanel />,
+    python: <PythonOperationalPanel />,
     
     // Legacy/alternate names
     messages: <ChatPanel />,

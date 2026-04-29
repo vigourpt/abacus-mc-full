@@ -20,3 +20,7 @@ export * from './AgentVisualizerPanel';
 export * from './PipelinePanel';
 export * from './OrgChartPanel';
 export * from './ThreadMessagingPanel';
+export * from './PythonOperationalPanel';
+export * from './KnowledgeSystemPanel';
+export * from './ReputationSystemPanel';
+export * from './ModArchitecturePanel';
