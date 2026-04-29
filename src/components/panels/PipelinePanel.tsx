@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, DragEvent } from 'react';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import type { Task, Agent, TaskStatus } from '@/types';
@@ -66,6 +66,14 @@ const STATUS_TO_STAGE: Record<TaskStatus, string> = {
   blocked: 'tasks',
 };
 
+// Reverse map - stage to status
+const STAGE_TO_STATUS: Record<string, TaskStatus[]> = {
+  planner: ['inbox'],
+  tasks: ['backlog', 'todo', 'blocked'],
+  agents: ['in_progress'],
+  results: ['review', 'done'],
+};
+
 // Priority colors
 const PRIORITY_COLORS: Record<string, string> = {
   critical: 'bg-red-500',
@@ -74,11 +82,24 @@ const PRIORITY_COLORS: Record<string, string> = {
   low: 'bg-gray-500',
 };
 
+// Status display names
+const STATUS_NAMES: Record<TaskStatus, string> = {
+  inbox: 'Inbox',
+  backlog: 'Backlog',
+  todo: 'To Do',
+  in_progress: 'In Progress',
+  review: 'Review',
+  done: 'Done',
+  blocked: 'Blocked',
+};
+
 export function PipelinePanel() {
-  const { tasks, agents } = useAppStore();
+  const { tasks, agents, updateTask } = useAppStore();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterProject, setFilterProject] = useState<string>('all');
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  const [dragOverStage, setDragOverStage] = useState<string | null>(null);
 
   // Group tasks by pipeline stage
   const tasksByStage = useMemo(() => {
@@ -116,7 +137,6 @@ export function PipelinePanel() {
     const blocked = tasks.filter((t) => t.status === 'blocked').length;
     const avgCompletionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
     
-    // Calculate average execution time for completed tasks
     const completedTasks = tasks.filter((t) => t.status === 'done' && t.completedAt && t.startedAt);
     let avgExecutionTime = 0;
     if (completedTasks.length > 0) {
@@ -125,7 +145,7 @@ export function PipelinePanel() {
         const end = new Date(task.completedAt!).getTime();
         return acc + (end - start);
       }, 0);
-      avgExecutionTime = Math.round(totalTime / completedTasks.length / (1000 * 60)); // in minutes
+      avgExecutionTime = Math.round(totalTime / completedTasks.length / (1000 * 60));
     }
 
     return {
@@ -163,6 +183,77 @@ export function PipelinePanel() {
     return Array.from(tags);
   }, [tasks]);
 
+  // Drag handlers
+  function handleDragStart(e: DragEvent, task: Task) {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', task.id);
+    setDraggingTaskId(task.id);
+  }
+
+  function handleDragEnd() {
+    setDraggingTaskId(null);
+    setDragOverStage(null);
+  }
+
+  function handleDragOver(e: DragEvent, stageId: string) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverStage(stageId);
+  }
+
+  function handleDragLeave() {
+    setDragOverStage(null);
+  }
+
+  function handleDrop(e: DragEvent, targetStageId: string) {
+    e.preventDefault();
+    const taskId = e.dataTransfer.getData('text/plain');
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    // Find current stage of the task
+    const currentStage = STATUS_TO_STAGE[task.status];
+    if (currentStage === targetStageId) {
+      // Same stage - no change needed
+      setDraggingTaskId(null);
+      setDragOverStage(null);
+      return;
+    }
+
+    // Get the first status in the target stage
+    const targetStatuses = STAGE_TO_STATUS[targetStageId];
+    if (!targetStatuses || targetStatuses.length === 0) {
+      setDraggingTaskId(null);
+      setDragOverStage(null);
+      return;
+    }
+
+    // Map to appropriate status based on target stage
+    let newStatus: TaskStatus;
+    switch (targetStageId) {
+      case 'planner':
+        newStatus = 'inbox';
+        break;
+      case 'tasks':
+        newStatus = task.status === 'blocked' ? 'blocked' : 'backlog';
+        break;
+      case 'agents':
+        newStatus = 'in_progress';
+        break;
+      case 'results':
+        newStatus = task.status === 'done' ? 'done' : 'review';
+        break;
+      default:
+        newStatus = task.status;
+    }
+
+    // Update the task status
+    updateTask(taskId, { status: newStatus });
+    
+    setDraggingTaskId(null);
+    setDragOverStage(null);
+  }
+
   return (
     <div className="h-full flex flex-col bg-gray-950">
       {/* Header */}
@@ -174,7 +265,7 @@ export function PipelinePanel() {
               Task Pipeline
             </h1>
             <p className="text-sm text-gray-400 mt-1">
-              Real-time visualization of task flow through the system
+              Drag tasks between stages to change their status
             </p>
           </div>
           
@@ -225,67 +316,86 @@ export function PipelinePanel() {
       <div className="flex-1 overflow-hidden p-4">
         <div className="h-full flex gap-4">
           {/* Pipeline Stages */}
-          {PIPELINE_STAGES.map((stage, index) => (
-            <div key={stage.id} className="flex-1 flex flex-col min-w-0">
-              {/* Stage Header */}
+          {PIPELINE_STAGES.map((stage, index) => {
+            const isDropTarget = dragOverStage === stage.id;
+            
+            return (
               <div
-                className={cn(
-                  'flex-shrink-0 rounded-t-lg p-3 border-t-2',
-                  stage.bgColor,
-                  stage.borderColor.replace('/30', '')
-                )}
+                key={stage.id}
+                className="flex-1 flex flex-col min-w-0"
+                onDragOver={(e) => handleDragOver(e, stage.id)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, stage.id)}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl">{stage.icon}</span>
-                    <div>
-                      <h3 className={cn('font-semibold', stage.color)}>{stage.name}</h3>
-                      <p className="text-xs text-gray-500">{stage.description}</p>
+                {/* Stage Header */}
+                <div
+                  className={cn(
+                    'flex-shrink-0 rounded-t-lg p-3 border-t-2 transition-all',
+                    stage.bgColor,
+                    isDropTarget ? 'scale-105 border-2 border-cyan-400' : stage.borderColor.replace('/30', '')
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">{stage.icon}</span>
+                      <div>
+                        <h3 className={cn('font-semibold', stage.color)}>{stage.name}</h3>
+                        <p className="text-xs text-gray-500">{stage.description}</p>
+                      </div>
                     </div>
+                    <span className={cn('text-lg font-bold', stage.color)}>
+                      {filteredTasksByStage[stage.id]?.length || 0}
+                    </span>
                   </div>
-                  <span className={cn('text-lg font-bold', stage.color)}>
-                    {filteredTasksByStage[stage.id]?.length || 0}
-                  </span>
-                </div>
-              </div>
-
-              {/* Arrow between stages */}
-              {index < PIPELINE_STAGES.length - 1 && (
-                <div className="absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 z-10 hidden xl:block">
-                  <div className="text-gray-600 text-2xl">→</div>
-                </div>
-              )}
-
-              {/* Task List */}
-              <div
-                className={cn(
-                  'flex-1 rounded-b-lg border border-t-0 p-2 overflow-y-auto',
-                  stage.bgColor,
-                  stage.borderColor
-                )}
-              >
-                <div className="space-y-2">
-                  {filteredTasksByStage[stage.id]?.map((task) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      agent={task.assignedTo ? agentMap[task.assignedTo] : undefined}
-                      stageColor={stage.color}
-                      onClick={() => setSelectedTask(task)}
-                      isSelected={selectedTask?.id === task.id}
-                    />
-                  ))}
                   
-                  {(!filteredTasksByStage[stage.id] || filteredTasksByStage[stage.id].length === 0) && (
-                    <div className="text-center text-gray-500 py-8">
-                      <span className="text-2xl opacity-50">{stage.icon}</span>
-                      <p className="text-xs mt-2">No tasks</p>
+                  {/* Drop indicator */}
+                  {isDropTarget && (
+                    <div className="mt-2 text-xs text-cyan-400 bg-cyan-500/20 rounded px-2 py-1 text-center">
+                      Drop to move here
                     </div>
                   )}
                 </div>
+
+                {/* Task List */}
+                <div
+                  className={cn(
+                    'flex-1 rounded-b-lg border border-t-0 p-2 overflow-y-auto transition-all',
+                    stage.bgColor,
+                    stage.borderColor,
+                    isDropTarget && 'bg-cyan-500/10 border-cyan-500/50'
+                  )}
+                >
+                  <div className="space-y-2">
+                    {filteredTasksByStage[stage.id]?.map((task) => (
+                      <DraggableTaskCard
+                        key={task.id}
+                        task={task}
+                        agent={task.assignedTo ? agentMap[task.assignedTo] : undefined}
+                        stageColor={stage.color}
+                        onClick={() => setSelectedTask(task)}
+                        isSelected={selectedTask?.id === task.id}
+                        isDragging={draggingTaskId === task.id}
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                      />
+                    ))}
+                    
+                    {(!filteredTasksByStage[stage.id] || filteredTasksByStage[stage.id].length === 0) && (
+                      <div className={cn(
+                        'text-center text-gray-500 py-8 border-2 border-dashed rounded-lg',
+                        isDropTarget && 'border-cyan-500/50 text-cyan-400'
+                      )}>
+                        <span className="text-2xl opacity-50">{stage.icon}</span>
+                        <p className="text-xs mt-2">
+                          {isDropTarget ? 'Drop here' : 'No tasks'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -295,6 +405,10 @@ export function PipelinePanel() {
           task={selectedTask}
           agent={selectedTask.assignedTo ? agentMap[selectedTask.assignedTo] : undefined}
           onClose={() => setSelectedTask(null)}
+          onStatusChange={(newStatus) => {
+            updateTask(selectedTask.id, { status: newStatus });
+            setSelectedTask(null);
+          }}
         />
       )}
 
@@ -309,6 +423,88 @@ export function PipelinePanel() {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+// Draggable Task Card Component
+function DraggableTaskCard({
+  task,
+  agent,
+  stageColor,
+  onClick,
+  isSelected,
+  isDragging,
+  onDragStart,
+  onDragEnd,
+}: {
+  task: Task;
+  agent?: Agent;
+  stageColor: string;
+  onClick: () => void;
+  isSelected: boolean;
+  isDragging: boolean;
+  onDragStart: (e: DragEvent, task: Task) => void;
+  onDragEnd: () => void;
+}) {
+  const priorityColor = PRIORITY_COLORS[task.priority] || PRIORITY_COLORS.medium;
+  
+  return (
+    <div
+      draggable
+      onDragStart={(e) => onDragStart(e, task)}
+      onDragEnd={onDragEnd}
+      onClick={onClick}
+      className={cn(
+        'bg-gray-800/80 rounded-lg p-3 cursor-grab active:cursor-grabbing transition-all border',
+        isSelected && 'border-cyan-500 ring-1 ring-cyan-500',
+        isDragging && 'opacity-50 scale-95',
+        'hover:bg-gray-800 hover:border-gray-600'
+      )}
+    >
+      {/* Priority Indicator */}
+      <div className="flex items-center gap-2 mb-2">
+        <div className={cn('w-2 h-2 rounded-full', priorityColor)} title={task.priority} />
+        <span className="text-xs text-gray-500 uppercase">{task.priority}</span>
+        {task.status === 'blocked' && (
+          <span className="text-xs bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">Blocked</span>
+        )}
+        <span className="ml-auto text-xs text-gray-600">⋮⋮</span>
+      </div>
+
+      {/* Task Title */}
+      <h4 className="text-sm font-medium text-white truncate mb-2" title={task.title}>
+        {task.title}
+      </h4>
+
+      {/* Description Preview */}
+      {task.description && (
+        <p className="text-xs text-gray-400 line-clamp-2 mb-2">{task.description}</p>
+      )}
+
+      {/* Agent Assignment */}
+      {agent ? (
+        <div className="flex items-center gap-2 text-xs">
+          <span>{agent.emoji}</span>
+          <span className="text-gray-300 truncate">{agent.name}</span>
+        </div>
+      ) : (
+        <div className="text-xs text-gray-600">Unassigned</div>
+      )}
+
+      {/* Tags */}
+      {task.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-2">
+          {task.tags.slice(0, 3).map((tag) => (
+            <span key={tag} className="text-xs bg-gray-700/50 text-gray-400 px-1.5 py-0.5 rounded">
+              {tag}
+            </span>
+          ))}
+          {task.tags.length > 3 && (
+            <span className="text-xs text-gray-500">+{task.tags.length - 3}</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -348,212 +544,101 @@ function MetricCard({
   );
 }
 
-// Task Card Component
-function TaskCard({
-  task,
-  agent,
-  stageColor,
-  onClick,
-  isSelected,
-}: {
-  task: Task;
-  agent?: Agent;
-  stageColor: string;
-  onClick: () => void;
-  isSelected: boolean;
-}) {
-  const priorityColor = PRIORITY_COLORS[task.priority] || PRIORITY_COLORS.medium;
-  
-  return (
-    <div
-      onClick={onClick}
-      className={cn(
-        'bg-gray-800/80 rounded-lg p-3 cursor-pointer transition-all border',
-        isSelected
-          ? 'border-cyan-500 ring-1 ring-cyan-500'
-          : 'border-gray-700 hover:border-gray-600',
-        'hover:bg-gray-800'
-      )}
-    >
-      {/* Priority Indicator */}
-      <div className="flex items-center gap-2 mb-2">
-        <div className={cn('w-2 h-2 rounded-full', priorityColor)} title={task.priority} />
-        <span className="text-xs text-gray-500 uppercase">{task.priority}</span>
-        {task.status === 'blocked' && (
-          <span className="text-xs bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">Blocked</span>
-        )}
-      </div>
-
-      {/* Task Title */}
-      <h4 className="text-sm font-medium text-white truncate mb-2" title={task.title}>
-        {task.title}
-      </h4>
-
-      {/* Description Preview */}
-      {task.description && (
-        <p className="text-xs text-gray-400 line-clamp-2 mb-2">{task.description}</p>
-      )}
-
-      {/* Agent Assignment */}
-      {agent ? (
-        <div className="flex items-center gap-2 text-xs">
-          <span>{agent.emoji}</span>
-          <span className={cn('truncate', stageColor)}>{agent.name}</span>
-        </div>
-      ) : (
-        <div className="text-xs text-gray-500 italic">Unassigned</div>
-      )}
-
-      {/* Tags */}
-      {task.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2">
-          {task.tags.slice(0, 2).map((tag) => (
-            <span
-              key={tag}
-              className="text-xs bg-gray-700 text-gray-300 px-1.5 py-0.5 rounded"
-            >
-              {tag}
-            </span>
-          ))}
-          {task.tags.length > 2 && (
-            <span className="text-xs text-gray-500">+{task.tags.length - 2}</span>
-          )}
-        </div>
-      )}
-
-      {/* Dependencies Indicator */}
-      {task.dependencies.length > 0 && (
-        <div className="flex items-center gap-1 mt-2 text-xs text-gray-500">
-          <span>🔗</span>
-          <span>{task.dependencies.length} dependencies</span>
-        </div>
-      )}
-
-      {/* Subtasks Indicator */}
-      {task.subtasks.length > 0 && (
-        <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
-          <span>📎</span>
-          <span>{task.subtasks.length} subtasks</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // Task Detail Sidebar
 function TaskDetailSidebar({
   task,
   agent,
   onClose,
+  onStatusChange,
 }: {
   task: Task;
   agent?: Agent;
   onClose: () => void;
+  onStatusChange: (status: TaskStatus) => void;
 }) {
-  const priorityColor = PRIORITY_COLORS[task.priority] || PRIORITY_COLORS.medium;
-  
+  const { updateTask } = useAppStore();
+
   return (
-    <div className="fixed inset-y-0 right-0 w-96 bg-gray-900 border-l border-gray-800 shadow-xl z-50 overflow-y-auto">
+    <div className="absolute right-0 top-0 h-full w-96 bg-gray-900 border-l border-gray-800 z-50 flex flex-col">
       {/* Header */}
-      <div className="sticky top-0 bg-gray-900 border-b border-gray-800 p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white">Task Details</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors p-1"
-          >
-            ✕
-          </button>
-        </div>
+      <div className="flex items-center justify-between p-4 border-b border-gray-800">
+        <h3 className="text-lg font-semibold text-white">Task Details</h3>
+        <button
+          onClick={onClose}
+          className="text-gray-400 hover:text-white p-1"
+        >
+          ✕
+        </button>
       </div>
 
       {/* Content */}
-      <div className="p-4 space-y-6">
-        {/* Title & Priority */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Title */}
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <div className={cn('w-3 h-3 rounded-full', priorityColor)} />
-            <span className="text-sm text-gray-400 capitalize">{task.priority} Priority</span>
-          </div>
-          <h3 className="text-xl font-bold text-white">{task.title}</h3>
-        </div>
-
-        {/* Status */}
-        <div>
-          <label className="text-xs text-gray-500 uppercase tracking-wide">Status</label>
-          <div className="mt-1">
-            <StatusBadge status={task.status} />
+          <h2 className="text-xl font-bold text-white mb-2">{task.title}</h2>
+          <div className="flex items-center gap-2">
+            <div className={cn('w-2 h-2 rounded-full', PRIORITY_COLORS[task.priority])} />
+            <span className="text-sm text-gray-400 uppercase">{task.priority}</span>
+            <span className="text-gray-600">•</span>
+            <span className="text-sm text-gray-400">{STATUS_NAMES[task.status]}</span>
           </div>
         </div>
 
         {/* Description */}
-        <div>
-          <label className="text-xs text-gray-500 uppercase tracking-wide">Description</label>
-          <p className="mt-1 text-gray-300 text-sm">{task.description || 'No description'}</p>
-        </div>
+        {task.description && (
+          <div>
+            <label className="text-xs text-gray-500 uppercase mb-1 block">Description</label>
+            <p className="text-sm text-gray-300">{task.description}</p>
+          </div>
+        )}
 
-        {/* Assigned Agent */}
+        {/* Agent */}
         <div>
-          <label className="text-xs text-gray-500 uppercase tracking-wide">Assigned To</label>
+          <label className="text-xs text-gray-500 uppercase mb-1 block">Assigned To</label>
           {agent ? (
-            <div className="mt-2 flex items-center gap-3 bg-gray-800 rounded-lg p-3">
-              <span className="text-2xl">{agent.emoji}</span>
+            <div className="flex items-center gap-2 bg-gray-800 rounded-lg p-2">
+              <span className="text-lg">{agent.emoji}</span>
               <div>
-                <p className="font-medium text-white">{agent.name}</p>
-                <p className="text-xs text-gray-400">{agent.division}</p>
+                <div className="text-sm font-medium text-white">{agent.name}</div>
+                <div className="text-xs text-gray-400">{agent.division}</div>
               </div>
-              <div
-                className={cn(
-                  'ml-auto w-2 h-2 rounded-full',
-                  agent.status === 'active' ? 'bg-green-500' : 'bg-gray-500'
-                )}
-              />
             </div>
           ) : (
-            <p className="mt-1 text-gray-500 italic text-sm">Unassigned</p>
+            <div className="text-sm text-gray-500">Unassigned</div>
           )}
         </div>
 
-        {/* Dependencies */}
-        {task.dependencies.length > 0 && (
-          <div>
-            <label className="text-xs text-gray-500 uppercase tracking-wide">Dependencies</label>
-            <div className="mt-2 space-y-1">
-              {task.dependencies.map((depId) => (
-                <div key={depId} className="flex items-center gap-2 text-sm text-gray-300 bg-gray-800 rounded px-2 py-1">
-                  <span>🔗</span>
-                  <span className="truncate">{depId}</span>
-                </div>
-              ))}
-            </div>
+        {/* Status Change */}
+        <div>
+          <label className="text-xs text-gray-500 uppercase mb-2 block">Change Status</label>
+          <div className="grid grid-cols-2 gap-2">
+            {(['inbox', 'backlog', 'todo', 'in_progress', 'review', 'done', 'blocked'] as TaskStatus[]).map((status) => (
+              <button
+                key={status}
+                onClick={() => {
+                  onStatusChange(status);
+                }}
+                disabled={task.status === status}
+                className={cn(
+                  'px-3 py-2 rounded text-xs font-medium transition-colors',
+                  task.status === status
+                    ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white border border-gray-700'
+                )}
+              >
+                {STATUS_NAMES[status]}
+              </button>
+            ))}
           </div>
-        )}
-
-        {/* Subtasks */}
-        {task.subtasks.length > 0 && (
-          <div>
-            <label className="text-xs text-gray-500 uppercase tracking-wide">Subtasks</label>
-            <div className="mt-2 space-y-1">
-              {task.subtasks.map((subtaskId) => (
-                <div key={subtaskId} className="flex items-center gap-2 text-sm text-gray-300 bg-gray-800 rounded px-2 py-1">
-                  <span>📎</span>
-                  <span className="truncate">{subtaskId}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        </div>
 
         {/* Tags */}
         {task.tags.length > 0 && (
           <div>
-            <label className="text-xs text-gray-500 uppercase tracking-wide">Tags</label>
-            <div className="mt-2 flex flex-wrap gap-2">
+            <label className="text-xs text-gray-500 uppercase mb-1 block">Tags</label>
+            <div className="flex flex-wrap gap-1">
               {task.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="text-sm bg-gray-700 text-gray-300 px-2 py-1 rounded"
-                >
+                <span key={tag} className="text-xs bg-gray-800 text-gray-400 px-2 py-1 rounded">
                   {tag}
                 </span>
               ))}
@@ -561,93 +646,13 @@ function TaskDetailSidebar({
           </div>
         )}
 
-        {/* Estimated Hours */}
-        {task.estimatedHours && (
-          <div>
-            <label className="text-xs text-gray-500 uppercase tracking-wide">Estimated Time</label>
-            <p className="mt-1 text-gray-300">{task.estimatedHours} hours</p>
-          </div>
-        )}
-
         {/* Timestamps */}
-        <div className="space-y-2">
-          <div>
-            <label className="text-xs text-gray-500 uppercase tracking-wide">Created</label>
-            <p className="text-sm text-gray-400">
-              {new Date(task.createdAt).toLocaleString()}
-            </p>
-          </div>
-          {task.startedAt && (
-            <div>
-              <label className="text-xs text-gray-500 uppercase tracking-wide">Started</label>
-              <p className="text-sm text-gray-400">
-                {new Date(task.startedAt).toLocaleString()}
-              </p>
-            </div>
-          )}
-          {task.completedAt && (
-            <div>
-              <label className="text-xs text-gray-500 uppercase tracking-wide">Completed</label>
-              <p className="text-sm text-gray-400">
-                {new Date(task.completedAt).toLocaleString()}
-              </p>
-            </div>
-          )}
+        <div className="text-xs text-gray-500 space-y-1">
+          <div>Created: {new Date(task.createdAt).toLocaleString()}</div>
+          {task.startedAt && <div>Started: {new Date(task.startedAt).toLocaleString()}</div>}
+          {task.completedAt && <div>Completed: {new Date(task.completedAt).toLocaleString()}</div>}
         </div>
-
-        {/* Output */}
-        {task.actualOutput && (
-          <div>
-            <label className="text-xs text-gray-500 uppercase tracking-wide">Output</label>
-            <div className="mt-2 bg-gray-800 rounded-lg p-3">
-              <pre className="text-xs text-gray-300 whitespace-pre-wrap overflow-x-auto">
-                {task.actualOutput}
-              </pre>
-            </div>
-          </div>
-        )}
-
-        {/* Quality Score */}
-        {task.qualityScore !== undefined && (
-          <div>
-            <label className="text-xs text-gray-500 uppercase tracking-wide">Quality Score</label>
-            <div className="mt-2 flex items-center gap-2">
-              <div className="flex-1 bg-gray-700 rounded-full h-2">
-                <div
-                  className={cn(
-                    'h-2 rounded-full',
-                    task.qualityScore >= 80 ? 'bg-green-500' :
-                    task.qualityScore >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                  )}
-                  style={{ width: `${task.qualityScore}%` }}
-                />
-              </div>
-              <span className="text-sm text-gray-300">{task.qualityScore}%</span>
-            </div>
-          </div>
-        )}
       </div>
     </div>
-  );
-}
-
-// Status Badge Component
-function StatusBadge({ status }: { status: TaskStatus }) {
-  const statusConfig: Record<TaskStatus, { label: string; color: string }> = {
-    inbox: { label: 'Inbox', color: 'bg-blue-500/20 text-blue-400' },
-    backlog: { label: 'Backlog', color: 'bg-gray-500/20 text-gray-400' },
-    todo: { label: 'To Do', color: 'bg-yellow-500/20 text-yellow-400' },
-    in_progress: { label: 'In Progress', color: 'bg-green-500/20 text-green-400' },
-    review: { label: 'Review', color: 'bg-purple-500/20 text-purple-400' },
-    done: { label: 'Done', color: 'bg-emerald-500/20 text-emerald-400' },
-    blocked: { label: 'Blocked', color: 'bg-red-500/20 text-red-400' },
-  };
-
-  const config = statusConfig[status] || statusConfig.todo;
-
-  return (
-    <span className={cn('px-2 py-1 rounded text-sm font-medium', config.color)}>
-      {config.label}
-    </span>
   );
 }
