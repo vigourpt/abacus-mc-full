@@ -25,6 +25,7 @@ const navSections: NavSection[] = [
       { id: 'tasks', icon: '📋', label: 'Tasks' },
       { id: 'pipeline', icon: '🔄', label: 'Pipeline' },
       { id: 'chat', icon: '💬', label: 'Chat' },
+      { id: 'threads', icon: '🧵', label: 'Threads' },
       { id: 'channels', icon: '📡', label: 'Channels' },
       { id: 'skills', icon: '📚', label: 'Skills' },
       { id: 'memory', icon: '🧠', label: 'Memory' },

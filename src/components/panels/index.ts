@@ -19,3 +19,4 @@ export * from './HiringPanel';
 export * from './AgentVisualizerPanel';
 export * from './PipelinePanel';
 export * from './OrgChartPanel';
+export * from './ThreadMessagingPanel';

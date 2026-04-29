@@ -30,6 +30,7 @@ import {
   AgentVisualizerPanel,
   PipelinePanel,
   OrgChartPanel,
+  ThreadMessagingPanel,
 } from '@/components/panels';
 
 export function Dashboard() {
@@ -177,6 +178,7 @@ function PanelContent({ panel }: { panel: string }) {
     // Main navigation
     agents: <AgentsPanel agents={agents} />,
     tasks: <TasksPanel tasks={tasks} />,
+    threads: <ThreadMessagingPanel />,
     channels: <ChannelsPanel />,
     skills: <SkillsPanel />,
     memory: <MemoryPanel />,
