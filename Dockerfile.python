@@ -1,0 +1,51 @@
+# ============================================
+# Dockerfile.python - Python Orchestration Layer
+# Runs Mission Control orchestrator + metrics API
+# ============================================
+
+# ---- Stage 1: Builder ----
+FROM python:3.11-slim AS builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy and install Python dependencies
+COPY requirements.txt ./
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+# ---- Stage 2: Production ----
+FROM python:3.11-slim AS production
+
+# Security: run as non-root user
+RUN groupadd --system --gid 1001 orchestrator \
+    && useradd --system --uid 1001 --gid orchestrator orchestrator
+
+WORKDIR /app
+
+# Copy installed packages from builder
+COPY --from=builder /install /usr/local
+
+# Copy orchestration source code
+COPY orchestration/ ./orchestration/
+COPY connectors/ ./connectors/
+COPY api/ ./api/
+COPY run_mission_control.py ./
+
+# Create necessary directories with correct ownership
+RUN mkdir -p tasks projects logs runs knowledge .data \
+    && chown -R orchestrator:orchestrator /app
+
+# Environment
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV LOG_LEVEL=INFO
+
+EXPOSE 9090
+
+USER orchestrator
+
+CMD ["python", "run_mission_control.py", "--use-scheduler", "--metrics-port", "9090"]

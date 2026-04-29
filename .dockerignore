@@ -1,0 +1,69 @@
+# ============================================
+# .dockerignore - Optimize Docker build context
+# ============================================
+
+# Dependencies (rebuilt in container)
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+.next/
+out/
+build/
+dist/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+
+# Version control
+.git/
+.gitignore
+
+# Environment files (secrets)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Data and runtime (mounted as volumes)
+.data/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+logs/
+runs/
+
+# IDE and OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Documentation (not needed in image)
+*.pdf
+docs/
+CONTRIBUTING.md
+CHANGELOG.md
+LICENSE
+
+# Testing
+coverage/
+test-results/
+playwright-report/
+
+# Docker files (avoid recursion)
+Dockerfile*
+docker-compose*.yml
+
+# Device identity (sensitive)
+device-identity.json
+*.pem

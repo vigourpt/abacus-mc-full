@@ -1,0 +1,12 @@
+# ============================================
+# Python Dependencies - Orchestration Layer
+# ============================================
+
+# Configuration
+PyYAML>=6.0,<7.0
+
+# HTTP client for OpenClaw Gateway
+requests>=2.31,<3.0
+
+# AI embeddings for knowledge system
+openai>=1.0,<2.0

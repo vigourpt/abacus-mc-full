@@ -1,0 +1,16 @@
+{
+  "task_id": "task_qa_005",
+  "project": "website-redesign",
+  "agent": "qa-engineer",
+  "description": "Perform end-to-end testing of the integrated application",
+  "status": "backlog",
+  "priority": "normal",
+  "depends_on": ["task_dev_004"],
+  "context": {
+    "test_types": ["e2e", "integration", "accessibility"],
+    "tools": ["playwright", "cypress"]
+  },
+  "tags": ["testing", "qa", "e2e"],
+  "created_at": "2026-03-11T10:20:00Z",
+  "updated_at": "2026-03-11T10:20:00Z"
+}

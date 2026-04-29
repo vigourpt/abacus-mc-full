@@ -1,0 +1,16 @@
+{
+  "task_id": "task_ml_001",
+  "project": "ml-pipeline",
+  "description": "Train a machine learning model for sentiment analysis using PyTorch and deploy to production",
+  "status": "backlog",
+  "priority": "high",
+  "context": {
+    "model_type": "transformer",
+    "framework": "pytorch",
+    "deployment": "kubernetes",
+    "notes": "This task will be matched to AI Engineer agent based on capabilities"
+  },
+  "tags": ["machine-learning", "nlp", "pytorch", "deployment"],
+  "created_at": "2026-03-11T11:00:00Z",
+  "updated_at": "2026-03-11T11:00:00Z"
+}

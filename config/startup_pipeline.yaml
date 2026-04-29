@@ -1,0 +1,234 @@
+# Startup Pipeline Configuration
+# Defines the default phases and tasks for generating a startup from an idea
+
+name: "Default Startup Pipeline"
+version: "1.0"
+description: "Standard 4-phase pipeline for startup generation"
+
+# Pipeline phases with their tasks and agent assignments
+phases:
+  - id: "product-definition"
+    name: "Product Definition"
+    description: "Define the product vision, market fit, and core features"
+    order: 1
+    tasks:
+      - id: "market-research"
+        title: "Market Research & Analysis"
+        description: "Analyze the market opportunity, competitors, and target audience for the startup idea"
+        priority: "critical"
+        estimatedHours: 4
+        agentRoles:
+          - "market-researcher"
+          - "strategy"
+        deliverables:
+          - "market_analysis.md"
+          - "competitor_analysis.md"
+        tags:
+          - "research"
+          - "strategy"
+
+      - id: "product-spec"
+        title: "Product Specification"
+        description: "Create detailed product specification including features, user stories, and MVP scope"
+        priority: "critical"
+        estimatedHours: 6
+        agentRoles:
+          - "product-manager"
+          - "product"
+        dependencies:
+          - "market-research"
+        deliverables:
+          - "product_spec.md"
+          - "user_stories.md"
+        tags:
+          - "product"
+          - "planning"
+
+  - id: "design"
+    name: "Design"
+    description: "Create user experience and visual design"
+    order: 2
+    tasks:
+      - id: "ux-design"
+        title: "UX Design & Wireframes"
+        description: "Design user flows, wireframes, and interaction patterns"
+        priority: "high"
+        estimatedHours: 8
+        agentRoles:
+          - "ux-designer"
+          - "design"
+        dependencies:
+          - "product-spec"
+        deliverables:
+          - "ux_design.md"
+          - "wireframes.md"
+        tags:
+          - "design"
+          - "ux"
+
+      - id: "ui-design"
+        title: "UI Design System"
+        description: "Create visual design system, components, and style guide"
+        priority: "high"
+        estimatedHours: 6
+        agentRoles:
+          - "ui-designer"
+          - "design"
+        dependencies:
+          - "ux-design"
+        deliverables:
+          - "design_system.md"
+          - "style_guide.md"
+        tags:
+          - "design"
+          - "ui"
+
+  - id: "build"
+    name: "Build"
+    description: "Technical architecture and implementation"
+    order: 3
+    tasks:
+      - id: "architecture"
+        title: "Technical Architecture"
+        description: "Design system architecture, tech stack, and infrastructure"
+        priority: "critical"
+        estimatedHours: 6
+        agentRoles:
+          - "software-architect"
+          - "engineering"
+        dependencies:
+          - "product-spec"
+        deliverables:
+          - "architecture.md"
+          - "tech_stack.md"
+        tags:
+          - "engineering"
+          - "architecture"
+
+      - id: "backend-development"
+        title: "Backend Development"
+        description: "Implement backend APIs, database, and business logic"
+        priority: "high"
+        estimatedHours: 20
+        agentRoles:
+          - "backend-developer"
+          - "engineering"
+        dependencies:
+          - "architecture"
+        deliverables:
+          - "api_spec.md"
+          - "database_schema.md"
+        tags:
+          - "engineering"
+          - "backend"
+
+      - id: "frontend-development"
+        title: "Frontend Development"
+        description: "Implement frontend UI components and user interfaces"
+        priority: "high"
+        estimatedHours: 20
+        agentRoles:
+          - "frontend-developer"
+          - "engineering"
+        dependencies:
+          - "ui-design"
+          - "architecture"
+        deliverables:
+          - "frontend_spec.md"
+          - "components.md"
+        tags:
+          - "engineering"
+          - "frontend"
+
+  - id: "marketing"
+    name: "Marketing"
+    description: "Go-to-market strategy and content creation"
+    order: 4
+    tasks:
+      - id: "brand-messaging"
+        title: "Brand Messaging & Copy"
+        description: "Develop brand voice, key messaging, and marketing copy"
+        priority: "high"
+        estimatedHours: 6
+        agentRoles:
+          - "copywriter"
+          - "marketing"
+        dependencies:
+          - "product-spec"
+        deliverables:
+          - "brand_messaging.md"
+          - "marketing_copy.md"
+        tags:
+          - "marketing"
+          - "content"
+
+      - id: "seo-strategy"
+        title: "SEO Strategy"
+        description: "Develop SEO strategy, keywords, and content plan"
+        priority: "medium"
+        estimatedHours: 4
+        agentRoles:
+          - "seo-strategist"
+          - "marketing"
+        dependencies:
+          - "brand-messaging"
+        deliverables:
+          - "seo_strategy.md"
+          - "keyword_research.md"
+        tags:
+          - "marketing"
+          - "seo"
+
+      - id: "growth-strategy"
+        title: "Growth Strategy"
+        description: "Define growth hacking tactics and launch strategy"
+        priority: "medium"
+        estimatedHours: 4
+        agentRoles:
+          - "growth-hacker"
+          - "marketing"
+        dependencies:
+          - "seo-strategy"
+        deliverables:
+          - "growth_strategy.md"
+          - "launch_plan.md"
+        tags:
+          - "marketing"
+          - "growth"
+
+# Agent role to division mapping
+agentMapping:
+  product-manager: "product"
+  market-researcher: "strategy"
+  ux-designer: "design"
+  ui-designer: "design"
+  software-architect: "engineering"
+  backend-developer: "engineering"
+  frontend-developer: "engineering"
+  copywriter: "marketing"
+  seo-strategist: "marketing"
+  growth-hacker: "marketing"
+
+# Project output structure
+projectStructure:
+  - brief.md
+  - market_analysis.md
+  - competitor_analysis.md
+  - product_spec.md
+  - user_stories.md
+  - ux_design.md
+  - wireframes.md
+  - design_system.md
+  - style_guide.md
+  - architecture.md
+  - tech_stack.md
+  - api_spec.md
+  - database_schema.md
+  - frontend_spec.md
+  - components.md
+  - brand_messaging.md
+  - marketing_copy.md
+  - seo_strategy.md
+  - keyword_research.md
+  - growth_strategy.md
+  - launch_plan.md

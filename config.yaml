@@ -1,0 +1,77 @@
+# Mission Control Configuration
+# =============================
+# Configuration for the AI agent orchestration layer
+
+# OpenClaw Gateway Connection
+openclaw:
+  # API endpoint for OpenClaw gateway
+  endpoint: ${OPENCLAW_GATEWAY_HOST:-http://localhost:8080}
+  
+  # Authentication token (set via OPENCLAW_GATEWAY_TOKEN env var)
+  token: ${OPENCLAW_GATEWAY_TOKEN:-}
+  
+  # Request timeout in seconds
+  timeout: 300
+  
+  # Number of retry attempts for failed requests
+  retry_attempts: 3
+
+# Task Processing Settings
+task_processing:
+  # Maximum number of concurrent task executions
+  max_concurrent: 5
+  
+  # Polling interval in seconds (how often to check backlog)
+  poll_interval: 2.0
+  
+  # Default max retries per task
+  default_max_retries: 3
+
+# Logging Configuration
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: INFO
+  
+  # Enable console output
+  console: true
+  
+  # Log file rotation settings
+  rotation:
+    max_size_mb: 10
+    backup_count: 5
+
+# Path Configuration
+paths:
+  # Directory for task state files
+  tasks_dir: tasks
+  
+  # Directory for project data
+  projects_dir: projects
+  
+  # Directory for log files
+  logs_dir: logs
+
+# Agent Routing
+agent_routing:
+  # Default agents for task types
+  defaults:
+    development: developer
+    marketing: marketing
+    sales: sales
+    operations: operations
+    planning: task-planner
+    executive: ceo
+  
+  # Fallback agent if no match found
+  fallback: task-planner
+
+# Health Checks
+health:
+  # Enable periodic health checks
+  enabled: true
+  
+  # Health check interval in seconds
+  interval: 60
+  
+  # Alert on failed health checks
+  alert_on_failure: true

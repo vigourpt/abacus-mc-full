@@ -1,0 +1,16 @@
+{
+  "task_id": "task_dev_004",
+  "project": "website-redesign",
+  "agent": "full-stack-developer",
+  "description": "Integrate frontend components with backend API",
+  "status": "backlog",
+  "priority": "normal",
+  "depends_on": ["task_dev_002", "task_dev_003"],
+  "context": {
+    "integration_type": "full-stack",
+    "notes": "This task requires both frontend components and API to be complete"
+  },
+  "tags": ["development", "integration"],
+  "created_at": "2026-03-11T10:15:00Z",
+  "updated_at": "2026-03-11T10:15:00Z"
+}

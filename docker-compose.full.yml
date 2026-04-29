@@ -1,0 +1,105 @@
+# ============================================
+# Docker Compose (Full Stack) - Autonomous AI Startup
+# Includes Next.js UI + Python Orchestration Layer
+# ============================================
+# Usage:
+#   docker compose -f docker-compose.full.yml up -d
+#   docker compose -f docker-compose.full.yml logs -f
+#   docker compose -f docker-compose.full.yml down
+# ============================================
+
+services:
+  # ---- Next.js Mission Control UI ----
+  mission-control-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.nextjs
+    container_name: mc-ui
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - HOSTNAME=0.0.0.0
+      - PORT=3000
+      - DATABASE_PATH=.data/startup.db
+      - AUTH_USER=${AUTH_USER:-admin}
+      - AUTH_PASS=${AUTH_PASS:-changeme}
+      - API_KEY=${API_KEY:-}
+      - OPENCLAW_GATEWAY_HOST=orchestration
+      - OPENCLAW_GATEWAY_PORT=${OPENCLAW_GATEWAY_PORT:-18789}
+      - OPENCLAW_GATEWAY_TOKEN=${OPENCLAW_GATEWAY_TOKEN:-}
+      - OPENCLAW_MEMORY_DIR=/app/workspace/agents
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-claude-3-opus}
+      - FALLBACK_MODEL=${FALLBACK_MODEL:-claude-3-sonnet}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - db-data:/app/.data
+      - workspace-data:/app/workspace
+    depends_on:
+      orchestration:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/agents"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - mc-internal
+
+  # ---- Python Orchestration Layer ----
+  orchestration:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    container_name: mc-orchestration
+    ports:
+      - "9090:9090"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - OPENCLAW_GATEWAY_HOST=${OPENCLAW_GATEWAY_HOST:-host.docker.internal}
+      - OPENCLAW_GATEWAY_PORT=${OPENCLAW_GATEWAY_PORT:-18789}
+      - OPENCLAW_GATEWAY_TOKEN=${OPENCLAW_GATEWAY_TOKEN:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - MC_CONFIG=/app/config/config.yaml
+      - DATABASE_PATH=/app/.data/orchestration.db
+    volumes:
+      - db-data:/app/.data
+      - knowledge-data:/app/knowledge
+      - projects-data:/app/projects
+      - tasks-data:/app/tasks
+      - runs-data:/app/runs
+      - ./config:/app/config:ro
+      - workspace-data:/app/workspace:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9090/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - mc-internal
+
+# ---- Named Volumes ----
+volumes:
+  db-data:
+    driver: local
+  workspace-data:
+    driver: local
+  knowledge-data:
+    driver: local
+  projects-data:
+    driver: local
+  tasks-data:
+    driver: local
+  runs-data:
+    driver: local
+
+# ---- Networks ----
+networks:
+  mc-internal:
+    driver: bridge
+    name: mission-control-network

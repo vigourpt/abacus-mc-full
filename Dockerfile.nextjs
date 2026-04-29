@@ -1,0 +1,72 @@
+# ============================================
+# Dockerfile.nextjs - Next.js Mission Control UI
+# For use with docker-compose.yml (multi-service)
+# ============================================
+# For standalone single-service deployment,
+# use the main Dockerfile instead.
+# ============================================
+
+# ---- Stage 1: Dependencies ----
+FROM node:20-alpine AS deps
+
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY package.json .npmrc* ./
+
+RUN pnpm install && pnpm approve-builds better-sqlite3
+
+# ---- Stage 2: Builder ----
+FROM node:20-alpine AS builder
+
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json .npmrc* ./
+
+COPY src/ ./src/
+COPY public/ ./public/
+COPY workspace/ ./workspace/
+COPY scripts/ ./scripts/
+COPY next.config.ts tsconfig.json tailwind.config.ts postcss.config.js ./
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN pnpm build
+
+# Prepare standalone output
+RUN cp -r public .next/standalone/public 2>/dev/null || true
+RUN cp -r .next/static .next/standalone/.next/static
+RUN mkdir -p .next/standalone/.data
+RUN cp -r workspace .next/standalone/workspace
+
+# ---- Stage 3: Production ----
+FROM node:20-alpine AS production
+
+RUN addgroup --system --gid 1001 nodejs \
+    && adduser --system --uid 1001 nextjs
+
+WORKDIR /app
+
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+
+RUN mkdir -p .data && chown -R nextjs:nodejs .data
+
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV DATABASE_PATH=.data/startup.db
+
+EXPOSE 3000
+
+USER nextjs
+
+CMD ["node", "server.js"]
