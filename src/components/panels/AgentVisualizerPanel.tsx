@@ -1119,7 +1119,7 @@ return (
             <span className="text-xs text-gray-500 min-w-[40px] text-right">{Math.round(zoom * 100)}%</span>
           </div>
         </div>
-        )}
+        </div>)}
       </div>
 
       {/* Main Content */}
