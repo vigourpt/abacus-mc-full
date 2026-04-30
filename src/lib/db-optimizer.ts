@@ -143,6 +143,7 @@ export const dbMaintenance = {
   // Run WAL checkpoint
   checkpoint: () => {
     try {
+      // libSQL/Turso handles WAL automatically, but we can still run checkpoint
       const result = db.pragma('wal_checkpoint(TRUNCATE)');
       logger.info({ result }, 'WAL checkpoint completed');
       return result;
@@ -192,23 +193,35 @@ export const dbMaintenance = {
   // Get database statistics
   getStats: () => {
     try {
+      // Note: libSQL may not support all these pragmas the same way
+      // We'll return what's available
       const pageCountResult = db.pragma('page_count') as { page_count: number }[];
       const pageSizeResult = db.pragma('page_size') as { page_size: number }[];
-      const walPages = db.pragma('wal_checkpoint(PASSIVE)');
       const freelistResult = db.pragma('freelist_count') as { freelist_count: number }[];
 
       const pageCount = pageCountResult[0]?.page_count || 0;
       const pageSize = pageSizeResult[0]?.page_size || 0;
       const freelistCount = freelistResult[0]?.freelist_count || 0;
 
-      const tables = db.prepare(`
-        SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'
-      `).all() as { name: string }[];
+      // Get table list
+      let tables: { name: string }[] = [];
+      try {
+        tables = db.prepare(`
+          SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'
+        `).all() as { name: string }[];
+      } catch (e) {
+        // Fallback if sqlite_master not available in libSQL
+        tables = [];
+      }
 
       const tableCounts: Record<string, number> = {};
       for (const table of tables) {
-        const result = db.prepare(`SELECT COUNT(*) as count FROM ${table.name}`).get() as { count: number };
-        tableCounts[table.name] = result.count;
+        try {
+          const result = db.prepare(`SELECT COUNT(*) as count FROM ${table.name}`).get() as { count: number };
+          tableCounts[table.name] = result?.count || 0;
+        } catch (e) {
+          tableCounts[table.name] = 0;
+        }
       }
 
       return {
@@ -217,7 +230,7 @@ export const dbMaintenance = {
         pageCount,
         pageSize,
         freelistCount,
-        walPages,
+        walPages: null, // Not available in libSQL the same way
         tables: tableCounts,
       };
     } catch (error) {

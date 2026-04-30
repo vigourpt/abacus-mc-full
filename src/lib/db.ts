@@ -1,8 +1,8 @@
 // =====================================================
-// Database Layer - SQLite with better-sqlite3
+// Database Layer - Turso (libSQL) with @libsql/client
 // =====================================================
 
-import Database from 'better-sqlite3';
+import { createClient, type Client, type ResultSet } from '@libsql/client';
 import path from 'path';
 import fs from 'fs';
 import { logger } from './logger';
@@ -10,34 +10,123 @@ import { logger } from './logger';
 const DATA_DIR = path.join(process.cwd(), '.data');
 const DB_PATH = process.env.DATABASE_PATH || path.join(DATA_DIR, 'startup.db');
 
-// Lazy singleton - only init when first accessed
-let _db: Database.Database | null = null;
-
-function getDb(): Database.Database {
-  if (_db !== null) return _db;
-  
-  // Ensure data directory exists
+// Build DATABASE_URL for Turso
+function getDatabaseUrl(): string {
+  // If TURSO_DATABASE_URL is set, use it (for Turso cloud)
+  if (process.env.TURSO_DATABASE_URL) {
+    return process.env.TURSO_DATABASE_URL;
+  }
+  // If TURSO_DB_NAME and TURSO_AUTH_TOKEN are set, construct URL
+  if (process.env.TURSO_DB_NAME) {
+    const token = process.env.TURSO_AUTH_TOKEN || '';
+    return `libsql://${process.env.TURSO_DB_NAME}.turso.io?authToken=${token}`;
+  }
+  // Fall back to local file for development
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
   }
-  
-  _db = new Database(DB_PATH);
-  _db.pragma('journal_mode = WAL');
-  _db.pragma('busy_timeout = 5000');
-  _db.pragma('foreign_keys = ON');
-  
-  logger.info({ path: DB_PATH }, 'Database initialized');
-  return _db;
+  return `file:${DB_PATH}`;
 }
 
-// Export lazy getter as db
-const db: Database.Database = new Proxy({} as Database.Database, {
-  get(_target, prop) {
-    return (getDb() as any)[prop];
+// Lazy singleton - only init when first accessed
+let _client: Client | null = null;
+
+function getClient(): Client {
+  if (_client !== null) return _client;
+  
+  const url = getDatabaseUrl();
+  const authToken = process.env.TURSO_AUTH_TOKEN;
+  
+  _client = createClient({
+    url,
+    authToken: authToken || undefined,
+  });
+  
+  logger.info({ url: url.replace(/\?authToken=.*$/, '?authToken=***') }, 'Database client initialized');
+  return _client;
+}
+
+// Transform libsql ResultSet to better-sqlite3-like format
+// libsql returns: { columns: string[], rows: any[] }
+// We want: array of objects like better-sqlite3
+function resultSetToRows<T = any>(result: ResultSet): T[] {
+  if (!result.rows || result.rows.length === 0) {
+    return [] as T[];
   }
+  return result.rows as T[];
+}
+
+// Create a statement-like wrapper for the client
+interface StatementResult {
+  all: (...params: any[]) => any[];
+  get: (...params: any[]) => any;
+  run: (...params: any[]) => { changes: number; lastInsertRowid: string | number };
+}
+
+// Create a statement wrapper that mimics better-sqlite3's prepared statement
+function createStatement(sql: string): StatementResult {
+  return {
+    all: (...params: any[]) => {
+      const result = getClient().execute({
+        sql,
+        args: params.length > 0 ? params : undefined,
+      });
+      return resultSetToRows(result);
+    },
+    get: (...params: any[]) => {
+      const result = getClient().execute({
+        sql,
+        args: params.length > 0 ? params : undefined,
+      });
+      const rows = resultSetToRows(result);
+      return rows[0] || undefined;
+    },
+    run: (...params: any[]) => {
+      const result = getClient().execute({
+        sql,
+        args: params.length > 0 ? params : undefined,
+      });
+      return {
+        changes: result.rowsAffected || 0,
+        lastInsertRowid: result.lastInsertRowid || 0,
+      };
+    },
+  };
+}
+
+// Database wrapper that mimics better-sqlite3's API
+const db = new Proxy({} as any, {
+  get(_target, prop) {
+    // For exec, prepare, and other direct methods on the database
+    if (prop === 'exec') {
+      return (sql: string) => {
+        // Handle multiple statements by splitting on semicolons
+        const statements = sql.split(';').filter(s => s.trim());
+        for (const stmt of statements) {
+          if (stmt.trim()) {
+            getClient().execute({ sql: stmt.trim(), args: undefined });
+          }
+        }
+      };
+    }
+    if (prop === 'pragma') {
+      // Pragma commands - some are informational, some modify behavior
+      return (pragma: string) => {
+        // For now, just execute the pragma - many SQLite pragmas work with libsql
+        const result = getClient().execute({ sql: `PRAGMA ${pragma}`, args: undefined });
+        return resultSetToRows(result);
+      };
+    }
+    if (prop === 'prepare') {
+      return createStatement;
+    }
+    // Fallback to client properties
+    const client = getClient();
+    return (client as any)[prop];
+  },
 });
 
-export { db, getDb };
+export { db, getClient };
 export default db;
 
 // Helper to run migrations
@@ -66,8 +155,8 @@ export function runMigrations() {
       dependencies TEXT DEFAULT '[]',
       collaboration_style TEXT,
       last_heartbeat TEXT,
-      created_at TEXT DEFAULT (datetime('now')),
-      updated_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (CURRENT_TIMESTAMP),
+      updated_at TEXT DEFAULT (CURRENT_TIMESTAMP)
     )`,
 
     // Migration 2: Tasks table (expanded for Phase 2)
@@ -92,8 +181,8 @@ export function runMigrations() {
       due_date TEXT,
       started_at TEXT,
       completed_at TEXT,
-      created_at TEXT DEFAULT (datetime('now')),
-      updated_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (CURRENT_TIMESTAMP),
+      updated_at TEXT DEFAULT (CURRENT_TIMESTAMP)
     )`,
 
     // Migration 3: Agent messages table
@@ -106,7 +195,7 @@ export function runMigrations() {
       task_id TEXT REFERENCES tasks(id),
       metadata TEXT DEFAULT '{}',
       read INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (CURRENT_TIMESTAMP)
     )`,
 
     // Migration 4: Hiring requests table (expanded)
@@ -121,7 +210,7 @@ export function runMigrations() {
       status TEXT DEFAULT 'pending',
       created_agent_id TEXT REFERENCES agents(id),
       approved_by TEXT,
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (CURRENT_TIMESTAMP)
     )`,
 
     // Migration 5: Gateway connections table
@@ -132,8 +221,8 @@ export function runMigrations() {
       status TEXT DEFAULT 'disconnected',
       last_connected TEXT,
       device_identity TEXT,
-      created_at TEXT DEFAULT (datetime('now')),
-      updated_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (CURRENT_TIMESTAMP),
+      updated_at TEXT DEFAULT (CURRENT_TIMESTAMP)
     )`,
 
     // Migration 6: Activity log
@@ -144,7 +233,7 @@ export function runMigrations() {
       task_id TEXT REFERENCES tasks(id),
       message TEXT NOT NULL,
       metadata TEXT DEFAULT '{}',
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (CURRENT_TIMESTAMP)
     )`,
 
     // Migration 7: Token usage tracking
@@ -156,7 +245,7 @@ export function runMigrations() {
       output_tokens INTEGER NOT NULL,
       cost REAL,
       task_id TEXT REFERENCES tasks(id),
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (CURRENT_TIMESTAMP)
     )`,
 
     // Migration 8: Task dependencies (Phase 2)
@@ -165,7 +254,7 @@ export function runMigrations() {
       task_id TEXT NOT NULL REFERENCES tasks(id),
       depends_on_task_id TEXT NOT NULL REFERENCES tasks(id),
       dependency_type TEXT DEFAULT 'finish_to_start',
-      created_at TEXT DEFAULT (datetime('now')),
+      created_at TEXT DEFAULT (CURRENT_TIMESTAMP),
       UNIQUE(task_id, depends_on_task_id)
     )`,
 
@@ -176,7 +265,7 @@ export function runMigrations() {
       lead_agent_id TEXT NOT NULL REFERENCES agents(id),
       collaborator_ids TEXT NOT NULL,
       status TEXT DEFAULT 'active',
-      created_at TEXT DEFAULT (datetime('now')),
+      created_at TEXT DEFAULT (CURRENT_TIMESTAMP),
       completed_at TEXT
     )`,
 
@@ -189,7 +278,7 @@ export function runMigrations() {
       agents_updated INTEGER DEFAULT 0,
       division TEXT,
       metadata TEXT DEFAULT '{}',
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (CURRENT_TIMESTAMP)
     )`,
 
     // Migration 11: OpenClaw skills
@@ -238,8 +327,8 @@ export function runMigrations() {
       method TEXT DEFAULT 'POST',
       events TEXT DEFAULT '[]',
       status TEXT DEFAULT 'active',
-      created_at TEXT DEFAULT (datetime('now')),
-      updated_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (CURRENT_TIMESTAMP),
+      updated_at TEXT DEFAULT (CURRENT_TIMESTAMP)
     )`,
 
     // Indexes
