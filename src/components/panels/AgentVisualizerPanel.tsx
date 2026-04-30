@@ -1025,7 +1025,7 @@ return (
         </div>
       ) : (
         /* Normal Controls */
-        <>
+        <div className="flex flex-col gap-4">
         <div className="flex items-center gap-4">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
             <span>🎮</span> Agent World
@@ -1118,7 +1118,7 @@ return (
             </button>
             <span className="text-xs text-gray-500 min-w-[40px] text-right">{Math.round(zoom * 100)}%</span>
           </div>
-        </>
+        </div>
         )}
       </div>
 
