@@ -1070,7 +1070,6 @@ return (
             ))}
           </div>
         </div>
-        
         <div className="flex items-center gap-3">
           {/* Status Legend */}
           <div className="flex items-center gap-3 text-xs">
