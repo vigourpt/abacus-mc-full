@@ -102,9 +102,31 @@ export interface OpenClawConfig {
 // Default configuration
 const DEFAULT_CONFIG: OpenClawConfig = {
   connection: {
-    host: process.env.OPENCLAW_GATEWAY_HOST || '127.0.0.1',
-    port: parseInt(process.env.OPENCLAW_GATEWAY_PORT || '18789'),
-    secure: process.env.OPENCLAW_GATEWAY_SECURE === 'true',
+    host: (() => {
+      const url = process.env.OPENCLAW_GATEWAY_URL;
+      if (url) {
+        try {
+          const u = new URL(url);
+          return u.hostname;
+        } catch { /* use default */ }
+      }
+      return process.env.OPENCLAW_GATEWAY_HOST || '127.0.0.1';
+    })(),
+    port: (() => {
+      const url = process.env.OPENCLAW_GATEWAY_URL;
+      if (url) {
+        try {
+          const u = new URL(url);
+          return parseInt(u.port) || (u.protocol === 'wss:' ? 443 : 80);
+        } catch { /* use default */ }
+      }
+      return parseInt(process.env.OPENCLAW_GATEWAY_PORT || '18789');
+    })(),
+    secure: (() => {
+      const url = process.env.OPENCLAW_GATEWAY_URL;
+      if (url) return url.startsWith('wss:');
+      return process.env.OPENCLAW_GATEWAY_SECURE === 'true';
+    })(),
     reconnectInterval: 5000,
     maxReconnectAttempts: 10,
     pingInterval: 30000,

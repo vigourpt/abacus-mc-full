@@ -33,6 +33,7 @@ const ENV_SCHEMA: EnvVar[] = [
   // OpenClaw Gateway
   { name: 'OPENCLAW_GATEWAY_HOST', required: false, description: 'OpenClaw Gateway hostname or IP' },
   { name: 'OPENCLAW_GATEWAY_PORT', required: false, default: '18789', description: 'OpenClaw Gateway port', validate: (v) => !isNaN(parseInt(v)) },
+  { name: 'OPENCLAW_GATEWAY_URL', required: false, description: 'OpenClaw Gateway full URL (e.g. ws://host:port or wss://host:port/path)' },
   { name: 'OPENCLAW_GATEWAY_TOKEN', required: false, description: 'OpenClaw Gateway auth token', sensitive: true },
   { name: 'OPENCLAW_CONFIG_PATH', required: false, description: 'Path to openclaw.json config file' },
   { name: 'OPENCLAW_STATE_DIR', required: false, description: 'Path to .openclaw state directory' },
@@ -98,8 +99,8 @@ export function validateEnvironment(): ValidationResult {
       warnings.push('MC_ALLOW_ANY_HOST is true - this is not recommended for production');
     }
 
-    if (!process.env.OPENCLAW_GATEWAY_HOST) {
-      warnings.push('OPENCLAW_GATEWAY_HOST is not set - OpenClaw integration will not work');
+    if (!process.env.OPENCLAW_GATEWAY_HOST && !process.env.OPENCLAW_GATEWAY_URL) {
+      warnings.push('OPENCLAW_GATEWAY_HOST or OPENCLAW_GATEWAY_URL is not set - OpenClaw integration will not work');
     }
   }
 
@@ -126,7 +127,7 @@ export function logEnvironmentStatus(): void {
   }
 
   // Log OpenClaw configuration status
-  const openclawConfigured = result.configured['OPENCLAW_GATEWAY_HOST'];
+  const openclawConfigured = result.configured['OPENCLAW_GATEWAY_HOST'] || result.configured['OPENCLAW_GATEWAY_URL'];
   if (openclawConfigured) {
     logger.info({
       host: process.env.OPENCLAW_GATEWAY_HOST,
