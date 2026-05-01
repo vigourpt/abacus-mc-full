@@ -3,11 +3,9 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   output: 'standalone',
   typescript: {
-    // TODO: Set to false once all type errors are resolved
     ignoreBuildErrors: true,
   },
   eslint: {
-    // TODO: Set to false once all lint errors are resolved
     ignoreDuringBuilds: true,
   },
   experimental: {
@@ -15,7 +13,7 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '10mb',
     },
   },
-  serverExternalPackages: ['better-sqlite3', 'pino', 'pino-pretty'],
+  serverExternalPackages: ['@libsql/client', 'better-sqlite3', 'pino', 'pino-pretty'],
   images: {
     remotePatterns: [
       {
@@ -24,7 +22,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Empty turbopack config to silence warning
   turbopack: {},
   webpack: (config, { isServer }) => {
     if (isServer) {
