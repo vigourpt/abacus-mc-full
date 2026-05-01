@@ -6,7 +6,7 @@ const TURSO_URL = process.env.TURSO_DATABASE_URL || '';
 const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN || '';
 
 async function tursoQuery(sql: string, args?: any[]) {
-  const body: any = { statements: args ? [sql, ...args] : [sql] };
+  const body = { statements: args ? [sql, args] : [sql] };
   const resp = await fetch(TURSO_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${TURSO_TOKEN}` },
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     const id = generateId();
     const slug = slugify(body.name);
     
-    const insertData = await tursoQuery(
+    await tursoQuery(
       `INSERT INTO agents (id, name, slug, description, emoji, color, division, specialization, source, status, capabilities, technical_skills, personality_traits, system_prompt, model_config, metrics) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, body.name, slug, body.description || '', body.emoji || '🤖', body.color || 'blue', body.division || 'engineering', body.specialization || '', body.source || 'local', 'idle', JSON.stringify(body.capabilities || []), JSON.stringify(body.technicalSkills || []), JSON.stringify(body.personalityTraits || []), body.systemPrompt || '', JSON.stringify({ primary: 'claude-3-opus', fallbacks: [] }), JSON.stringify({ tasksCompleted: 0, successRate: 0, avgResponseTime: 0 })]
     );
