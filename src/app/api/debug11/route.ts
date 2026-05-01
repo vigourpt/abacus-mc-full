@@ -2,12 +2,16 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { generateId } from '@/lib/utils';
 
+// Load https at module level
+const https = require('https');
+
 export async function GET() {
-  const http = require('https');
+  const id = generateId();
+  
   const data = JSON.stringify({ statements: ['SELECT * FROM agents LIMIT 3'] });
   
   const result = await new Promise((resolve) => {
-    const req = http.request({
+    const req = https.request({
       hostname: 'abacus-mc-vigourpt.aws-eu-west-1.turso.io',
       port: 443,
       path: '/',
@@ -32,5 +36,5 @@ export async function GET() {
     req.end();
   });
   
-  return NextResponse.json(result);
+  return NextResponse.json({ id: id.substring(0, 8), result });
 }
