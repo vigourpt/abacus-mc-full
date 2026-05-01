@@ -16,7 +16,7 @@ export default function Home() {
       setLoading(true);
       try {
         // Fetch agents
-        const agentsRes = await fetch('/api/turso-agent-list');
+        const agentsRes = await fetch('/api/agent-list-v2');
         if (agentsRes.ok) {
           const agents = await agentsRes.json();
           setAgents(agents);
