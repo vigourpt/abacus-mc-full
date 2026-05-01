@@ -12,9 +12,9 @@ export async function GET() {
     const client = createClient({ url: httpsUrl, authToken });
     const result = await client.execute('SELECT id, name FROM agents LIMIT 3');
     
-    return NextResponse.json(result.rows);
+    return NextResponse.json({ rows: result.rows, cols: result.columns });
   } catch (error) {
-    console.error('Failed:', error);
-    return NextResponse.json({ error: String(error) }, { status: 500 });
+    console.error('Error:', error);
+    return NextResponse.json({ error: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
 }
