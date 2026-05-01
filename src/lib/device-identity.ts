@@ -15,7 +15,8 @@ import { createChildLogger } from './logger';
 import type { DeviceIdentity } from '@/types';
 
 const logger = createChildLogger('device-identity');
-const IDENTITY_PATH = path.join(process.cwd(), '.data', 'device-identity.json');
+const IDENTITY_DIR = process.env.NETLIFY || process.env.CONTEXT ? '/tmp/.data' : '.data';
+const IDENTITY_PATH = path.join(process.cwd(), IDENTITY_DIR, 'device-identity.json');
 
 // =====================================================
 // Base64 URL Encoding (matching OpenClaw)
