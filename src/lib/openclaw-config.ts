@@ -135,7 +135,7 @@ const DEFAULT_CONFIG: OpenClawConfig = {
   },
   channels: [],
   defaultAgent: 'task-planner',
-  autoConnect: false,
+  autoConnect: process.env.OPENCLAW_AUTO_CONNECT === 'true' || false,
   debugMode: process.env.NODE_ENV !== 'production',
 };
 
