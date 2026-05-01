@@ -1,8 +1,8 @@
 export const dynamic = 'force-dynamic';
-import { NextRequest, NextResponse } from 'next/server';
-import { generateId, slugify } from '@/lib/utils';
+import { NextResponse } from 'next/server';
+import { generateId } from '@/lib/utils';
 
-// HTTPS module at module level (not inside async function)
+// HTTPS module at module level
 const https = require('https');
 
 function tursoFetch(sql: string, args?: any[]): Promise<any> {
@@ -71,39 +71,6 @@ export async function GET() {
     return NextResponse.json(agents);
   } catch (error) {
     console.error('Failed to fetch agents:', error);
-    return NextResponse.json({ error: String(error) }, { status: 500 });
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const id = generateId();
-    const slug = slugify(body.name);
-    
-    await tursoFetch(
-      `INSERT INTO agents (id, name, slug, description, emoji, color, division, specialization, source, status, capabilities, technical_skills, personality_traits, system_prompt, model_config, metrics) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, body.name, slug, body.description || '', body.emoji || '🤖', body.color || 'blue', body.division || 'engineering', body.specialization || '', body.source || 'local', 'idle', JSON.stringify(body.capabilities || []), JSON.stringify(body.technicalSkills || []), JSON.stringify(body.personalityTraits || []), body.systemPrompt || '', JSON.stringify({ primary: 'claude-3-opus', fallbacks: [] }), JSON.stringify({ tasksCompleted: 0, successRate: 0, avgResponseTime: 0 })]
-    );
-    
-    const result: any = await tursoFetch('SELECT * FROM agents WHERE id = ?', [id]);
-    const row = result?.results?.rows?.[0];
-    const cols = result?.results?.columns || [];
-    
-    if (!row) return NextResponse.json({ error: 'Agent not found after insert' }, { status: 500 });
-    
-    const obj: any = {};
-    cols.forEach((c: string, i: number) => { obj[c] = row[i]; });
-    
-    return NextResponse.json({
-      id: obj.id, name: obj.name, slug: obj.slug, description: obj.description,
-      emoji: obj.emoji, color: obj.color, division: obj.division,
-      status: obj.status,
-      capabilities: JSON.parse(obj.capabilities || '[]'),
-      systemPrompt: obj.system_prompt,
-    }, { status: 201 });
-  } catch (error) {
-    console.error('Failed to create agent:', error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
