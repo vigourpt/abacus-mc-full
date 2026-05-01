@@ -2,15 +2,17 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { generateId, slugify } from '@/lib/utils';
 
-function tursoQuery(sql: string, args?: any[]): Promise<any> {
+// HTTPS module at module level (not inside async function)
+const https = require('https');
+
+function tursoFetch(sql: string, args?: any[]): Promise<any> {
   return new Promise((resolve, reject) => {
     const rawUrl = process.env.TURSO_DATABASE_URL || '';
     const tokenMatch = rawUrl.match(/authToken=([^&]+)/);
     const authToken = process.env.TURSO_AUTH_TOKEN || (tokenMatch ? tokenMatch[1] : '');
     const body = JSON.stringify({ statements: args ? [sql, args] : [sql] });
     
-    const http = require('https');
-    const req = http.request({
+    const req = https.request({
       hostname: 'abacus-mc-vigourpt.aws-eu-west-1.turso.io',
       port: 443,
       path: '/',
@@ -46,7 +48,7 @@ function tursoQuery(sql: string, args?: any[]): Promise<any> {
 
 export async function GET() {
   try {
-    const result: any = await tursoQuery('SELECT * FROM agents ORDER BY division, name');
+    const result: any = await tursoFetch('SELECT * FROM agents ORDER BY division, name');
     const rows = result?.results?.rows || [];
     const cols = result?.results?.columns || [];
     
@@ -79,12 +81,12 @@ export async function POST(request: NextRequest) {
     const id = generateId();
     const slug = slugify(body.name);
     
-    await tursoQuery(
+    await tursoFetch(
       `INSERT INTO agents (id, name, slug, description, emoji, color, division, specialization, source, status, capabilities, technical_skills, personality_traits, system_prompt, model_config, metrics) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, body.name, slug, body.description || '', body.emoji || '🤖', body.color || 'blue', body.division || 'engineering', body.specialization || '', body.source || 'local', 'idle', JSON.stringify(body.capabilities || []), JSON.stringify(body.technicalSkills || []), JSON.stringify(body.personalityTraits || []), body.systemPrompt || '', JSON.stringify({ primary: 'claude-3-opus', fallbacks: [] }), JSON.stringify({ tasksCompleted: 0, successRate: 0, avgResponseTime: 0 })]
     );
     
-    const result: any = await tursoQuery('SELECT * FROM agents WHERE id = ?', [id]);
+    const result: any = await tursoFetch('SELECT * FROM agents WHERE id = ?', [id]);
     const row = result?.results?.rows?.[0];
     const cols = result?.results?.columns || [];
     
