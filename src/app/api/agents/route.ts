@@ -2,17 +2,31 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { generateId, slugify } from '@/lib/utils';
 
-const TURSO_URL = process.env.TURSO_DATABASE_URL || '';
+// Convert libsql:// to https:// for Turso
+function tursoUrlFromLibsql(libsqlUrl: string): string {
+  if (!libsqlUrl) return '';
+  // libsql://abacus-mc-vigourpt.aws-eu-west-1.turso.io?authToken=xxx
+  // → https://abacus-mc-vigourpt.aws-eu-west-1.turso.io (strip query params)
+  return libsqlUrl.replace(/^libsql:\/\//, 'https://').split('?')[0];
+}
+
+const TURSO_URL_RAW = process.env.TURSO_DATABASE_URL || '';
+const TURSO_URL_HTTPS = tursoUrlFromLibsql(TURSO_URL_RAW);
 const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN || '';
 
 async function tursoQuery(sql: string, args?: any[]) {
+  // Parse the token from the raw URL if not in env
+  const urlForToken = TURSO_URL_RAW || '';
+  const tokenMatch = urlForToken.match(/authToken=([^&]+)/);
+  const token = TURSO_TOKEN || (tokenMatch ? tokenMatch[1] : '');
+  
   const body = { statements: args ? [sql, args] : [sql] };
-  const resp = await fetch(TURSO_URL, {
+  const resp = await fetch(TURSO_URL_HTTPS, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${TURSO_TOKEN}` },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
     body: JSON.stringify(body),
   });
-  if (!resp.ok) throw new Error(`Turso error: ${resp.status}`);
+  if (!resp.ok) throw new Error(`Turso error: ${resp.status} ${resp.statusText}`);
   const data = await resp.json();
   if (Array.isArray(data) && data[0]?.error) throw new Error(data[0].error);
   return data;
