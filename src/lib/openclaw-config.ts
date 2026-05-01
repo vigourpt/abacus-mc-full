@@ -303,6 +303,15 @@ export function unmapAgentFromChannel(
  * Get WebSocket URL for connection
  */
 export function getWebSocketUrl(config?: OpenClawConnectionConfig): string {
+  // If OPENCLAW_GATEWAY_URL is set (e.g. ws-proxy URL), use it directly
+  const fullUrl = process.env.OPENCLAW_GATEWAY_URL;
+  if (fullUrl) {
+    try {
+      new URL(fullUrl); // Validate URL format
+      return fullUrl;
+    } catch { /* fall through to constructed URL */ }
+  }
+  
   const conn = config || getOpenClawConfig().connection;
   const protocol = conn.secure ? 'wss' : 'ws';
   return `${protocol}://${conn.host}:${conn.port}/v${OPENCLAW_PROTOCOL_VERSION}/control`;
