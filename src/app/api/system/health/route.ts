@@ -20,7 +20,7 @@ export async function GET() {
 
     // OpenClaw status (check without importing heavy client)
     const openclawConfigured = !!process.env.OPENCLAW_GATEWAY_HOST;
-    const gatewayConnections = db.prepare('SELECT COUNT(*) as count FROM gateway_connections').get() as any;
+    const gatewayConnections = (db.prepare('SELECT COUNT(*) as count FROM gateway_connections').get() as any)?.count ?? 0;
 
     // Determine overall status
     let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
@@ -69,7 +69,7 @@ export async function GET() {
         tasks: taskCount,
         activeTasks: activeTaskCount,
         activities: activityCount,
-        gateways: gatewayConnections.count,
+        gateways: gatewayConnections,
       },
       system: {
         cpuLoad: Math.round(cpuUsage * 100) / 100,
