@@ -7,10 +7,10 @@ import { getEnvironmentSummary } from '@/lib/env-validation';
 export async function GET() {
   try {
     // Database health
-    const agentCount = (db.prepare('SELECT COUNT(*) as count FROM agents').get() as any).count;
-    const taskCount = (db.prepare('SELECT COUNT(*) as count FROM tasks').get() as any).count;
-    const activeTaskCount = (db.prepare("SELECT COUNT(*) as count FROM tasks WHERE status = 'in_progress'").get() as any).count;
-    const activityCount = (db.prepare('SELECT COUNT(*) as count FROM activity_log').get() as any).count;
+    const agentCount = (db.prepare('SELECT COUNT(*) as count FROM agents').get() as any)?.count ?? 0;
+    const taskCount = (db.prepare('SELECT COUNT(*) as count FROM tasks').get() as any)?.count ?? 0;
+    const activeTaskCount = (db.prepare("SELECT COUNT(*) as count FROM tasks WHERE status = 'in_progress'").get() as any)?.count ?? 0;
+    const activityCount = (db.prepare('SELECT COUNT(*) as count FROM activity_log').get() as any)?.count ?? 0;
 
     // System metrics
     const cpuUsage = os.loadavg()[0];
