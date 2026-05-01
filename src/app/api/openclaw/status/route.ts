@@ -14,6 +14,16 @@ export async function GET() {
   try {
     const client = getOpenClawClient();
     const config = getOpenClawConfig();
+    
+    // Auto-connect if enabled and not connected
+    if (config.autoConnect && client.getState() === 'disconnected') {
+      try {
+        await client.connect();
+      } catch (error) {
+        console.error('Auto-connect failed:', error);
+      }
+    }
+    
     const connectionInfo = client.getConnectionInfo();
 
     // Get agent statistics
