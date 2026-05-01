@@ -35,11 +35,12 @@ function getClient(): Client {
   if (_client !== null) return _client;
   
   const url = getDatabaseUrl();
+  // Use TURSO_AUTH_TOKEN if set, otherwise let libsql extract from URL query param
   const authToken = process.env.TURSO_AUTH_TOKEN;
   
   _client = createClient({
     url,
-    authToken: authToken || undefined,
+    authToken: authToken || undefined,  // undefined means use URL-embedded token
   });
   
   logger.info({ url: url.replace(/\?authToken=.*$/, '?authToken=***') }, 'Database client initialized');
