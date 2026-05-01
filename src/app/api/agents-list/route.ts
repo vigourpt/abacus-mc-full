@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 const https = require('https');
 
 export async function GET() {
-  const data = JSON.stringify({ statements: ['SELECT id, name, slug, description, emoji, color, division, specialization, source, status, capabilities, technical_skills, personality_traits, system_prompt, model_config, metrics FROM agents ORDER BY division, name'] });
+  const data = JSON.stringify({ statements: ['SELECT * FROM agents LIMIT 12'] });
   
   const result = await new Promise((resolve: any) => {
     const req = https.request({
@@ -15,7 +15,7 @@ export async function GET() {
         'Authorization': `Bearer eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3Nzc1ODQzMDUsImlkIjoiMDE5ZGUwNDQtZTIwMS03MDIwLWE4M2MtZjc4OGVmNzdmYjc1IiwicmlkIjoiZGRmZjU0MzQtODI2Ni00YmY5LTgyYjYtMWYyNzM5MjljYmJiIn0.eOS1O1ZAt_w3LPQOs12kUU3HPC3FoOXutNWFN01gU1GhVo9eNDbu3HEUDSCTiVT1qm_mDlRc9jramm4dbT4VAA`,
         'Content-Length': Buffer.byteLength(data),
       },
-      timeout: 15000,
+      timeout: 10000,
     }, (res: any) => {
       let body = '';
       res.on('data', (chunk: any) => body += chunk);
