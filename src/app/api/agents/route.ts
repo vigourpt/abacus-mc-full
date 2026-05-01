@@ -1,35 +1,50 @@
-export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
+import * as https from 'https';
 import { generateId, slugify } from '@/lib/utils';
 
-// Convert libsql:// to https:// for Turso
-function tursoUrlFromLibsql(libsqlUrl: string): string {
-  if (!libsqlUrl) return '';
-  // libsql://abacus-mc-vigourpt.aws-eu-west-1.turso.io?authToken=xxx
-  // → https://abacus-mc-vigourpt.aws-eu-west-1.turso.io (strip query params)
-  return libsqlUrl.replace(/^libsql:\/\//, 'https://').split('?')[0];
-}
-
-const TURSO_URL_RAW = process.env.TURSO_DATABASE_URL || '';
-const TURSO_URL_HTTPS = tursoUrlFromLibsql(TURSO_URL_RAW);
-const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN || '';
-
-async function tursoQuery(sql: string, args?: any[]) {
-  // Parse the token from the raw URL if not in env
-  const urlForToken = TURSO_URL_RAW || '';
-  const tokenMatch = urlForToken.match(/authToken=([^&]+)/);
-  const token = TURSO_TOKEN || (tokenMatch ? tokenMatch[1] : '');
-  
-  const body = { statements: args ? [sql, args] : [sql] };
-  const resp = await fetch(TURSO_URL_HTTPS, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-    body: JSON.stringify(body),
+function tursoQuery(sql: string, args?: any[]): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const rawUrl = process.env.TURSO_DATABASE_URL || '';
+    const tokenMatch = rawUrl.match(/authToken=([^&]+)/);
+    const authToken = process.env.TURSO_AUTH_TOKEN || (tokenMatch ? tokenMatch[1] : '');
+    
+    const body = JSON.stringify({ statements: args ? [sql, args] : [sql] });
+    const url = new URL('https://abacus-mc-vigourpt.aws-eu-west-1.turso.io');
+    
+    const options: https.RequestOptions = {
+      hostname: url.hostname,
+      port: 443,
+      path: '/',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Length': Buffer.byteLength(body),
+      },
+      timeout: 10000,
+    };
+    
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => data += chunk);
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          if (Array.isArray(parsed) && parsed[0]?.error) {
+            reject(new Error(parsed[0].error));
+          } else {
+            resolve(parsed);
+          }
+        } catch (e) {
+          reject(new Error(`Invalid JSON: ${data.substring(0, 100)}`));
+        }
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    req.write(body);
+    req.end();
   });
-  if (!resp.ok) throw new Error(`Turso error: ${resp.status} ${resp.statusText}`);
-  const data = await resp.json();
-  if (Array.isArray(data) && data[0]?.error) throw new Error(data[0].error);
-  return data;
 }
 
 export async function GET() {
