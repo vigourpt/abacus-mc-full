@@ -2,16 +2,15 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { generateId } from '@/lib/utils';
 
-// HTTPS module at module level
+// Load https at module level
 const https = require('https');
 
-function tursoFetch(sql: string, args?: any[]): Promise<any> {
-  return new Promise((resolve, reject) => {
-    const rawUrl = process.env.TURSO_DATABASE_URL || '';
-    const tokenMatch = rawUrl.match(/authToken=([^&]+)/);
-    const authToken = process.env.TURSO_AUTH_TOKEN || (tokenMatch ? tokenMatch[1] : '');
-    const body = JSON.stringify({ statements: args ? [sql, args] : [sql] });
-    
+export async function GET() {
+  const id = generateId();
+  
+  const data = JSON.stringify({ statements: ['SELECT * FROM agents LIMIT 3'] });
+  
+  const result = await new Promise((resolve) => {
     const req = https.request({
       hostname: 'abacus-mc-vigourpt.aws-eu-west-1.turso.io',
       port: 443,
@@ -19,58 +18,23 @@ function tursoFetch(sql: string, args?: any[]): Promise<any> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-        'Content-Length': Buffer.byteLength(body),
+        'Authorization': `Bearer eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3Nzc1ODQzMDUsImlkIjoiMDE5ZGUwNDQtZTIwMS03MDIwLWE4M2MtZjc4OGVmNzdmYjc1IiwicmlkIjoiZGRmZjU0MzQtODI2Ni00YmY5LTgyYjYtMWYyNzM5MjljYmJiIn0.eOS1O1ZAt_w3LPQOs12kUU3HPC3FoOXutNWFN01gU1GhVo9eNDbu3HEUDSCTiVT1qm_mDlRc9jramm4dbT4VAA`,
+        'Content-Length': Buffer.byteLength(data),
       },
-      timeout: 15000,
+      timeout: 10000,
     }, (res: any) => {
-      let data = '';
-      res.on('data', (chunk: any) => data += chunk);
+      let body = '';
+      res.on('data', (chunk: any) => body += chunk);
       res.on('end', () => {
-        try {
-          const parsed = JSON.parse(data);
-          if (Array.isArray(parsed) && parsed[0]?.error) {
-            reject(new Error(parsed[0].error));
-          } else {
-            resolve(parsed[0]);
-          }
-        } catch (e) {
-          reject(new Error(`Parse error: ${data.substring(0, 100)}`));
-        }
+        try { resolve(JSON.parse(body)); }
+        catch (e) { resolve({ parseError: true, body: body.substring(0, 100) }); }
       });
     });
-    req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
-    req.write(body);
+    req.on('error', (e: any) => resolve({ error: e.message }));
+    req.on('timeout', () => { req.destroy(); resolve({ error: 'timeout' }); });
+    req.write(data);
     req.end();
   });
-}
-
-export async function GET() {
-  try {
-    const result: any = await tursoFetch('SELECT * FROM agents ORDER BY division, name');
-    const rows = result?.results?.rows || [];
-    const cols = result?.results?.columns || [];
-    
-    const agents = rows.map((row: any[]) => {
-      const obj: any = {};
-      cols.forEach((c: string, i: number) => { obj[c] = row[i]; });
-      return {
-        id: obj.id, name: obj.name, slug: obj.slug, description: obj.description,
-        emoji: obj.emoji || '🤖', color: obj.color || 'blue', division: obj.division,
-        specialization: obj.specialization,
-        source: obj.source || 'local', status: obj.status || 'idle',
-        capabilities: JSON.parse(obj.capabilities || '[]'),
-        technicalSkills: JSON.parse(obj.technical_skills || '[]'),
-        personalityTraits: JSON.parse(obj.personality_traits || '[]'),
-        systemPrompt: obj.system_prompt || '',
-        model: JSON.parse(obj.model_config || '{"primary":"claude-3-opus","fallbacks":[]}'),
-        metrics: JSON.parse(obj.metrics || '{"tasksCompleted":0,"successRate":0,"avgResponseTime":0}'),
-      };
-    });
-    return NextResponse.json(agents);
-  } catch (error) {
-    console.error('Failed to fetch agents:', error);
-    return NextResponse.json({ error: String(error) }, { status: 500 });
-  }
+  
+  return NextResponse.json({ id: id.substring(0, 8), result });
 }
