@@ -2,19 +2,36 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const TOKEN = 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3Nzc1ODQzMDUsImlkIjoiMDE5ZGUwNDQtZTIwMS03MDIwLWE4M2MtZjc4OGVmNzdmYjc1IiwicmlkIjoiZGRmZjU0MzQtODI2Ni00YmY5LTgyYjYtMWYyNzM5MjljYmJiIn0.eOS1O1ZAt_w3LPQOs12kUU3HPC3FoOXutNWFN01gU1GhVo9eNDbu3HEUDSCTiVT1qm_mDlRc9jramm4dbT4VAA';
+  // Test 1: fetch GET to github
+  let t1 = 'ok';
+  try {
+    const r = await fetch('https://api.github.com/', { signal: AbortSignal.timeout(5000) });
+    t1 = `github: ${r.status}`;
+  } catch (e: any) { t1 = `error: ${e.message.substring(0, 80)}`; }
   
-  // Use fetch (not native https) to Turso
-  const r = await fetch('https://abacus-mc-vigourpt.aws-eu-west-1.turso.io', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${TOKEN}`,
-    },
-    body: JSON.stringify({ statements: ['SELECT id, name, emoji FROM agents LIMIT 3'] }),
-    signal: AbortSignal.timeout(5000),
-  });
+  // Test 2: fetch POST to a different HTTPS endpoint
+  let t2 = 'ok';
+  try {
+    const r = await fetch('https://httpbin.org/post', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ test: 123 }),
+      signal: AbortSignal.timeout(5000),
+    });
+    t2 = `httpbin-post: ${r.status}`;
+  } catch (e: any) { t2 = `error: ${e.message.substring(0, 80)}`; }
   
-  const data = await r.json();
-  return NextResponse.json({ status: r.status, got: data });
+  // Test 3: fetch to Turso without auth
+  let t3 = 'ok';
+  try {
+    const r = await fetch('https://abacus-mc-vigourpt.aws-eu-west-1.turso.io', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ statements: ['SELECT 1'] }),
+      signal: AbortSignal.timeout(5000),
+    });
+    t3 = `turso-noauth: ${r.status}`;
+  } catch (e: any) { t3 = `error: ${e.message.substring(0, 80)}`; }
+  
+  return NextResponse.json({ t1, t2, t3 });
 }
