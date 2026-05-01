@@ -3,8 +3,29 @@ import { NextResponse } from 'next/server';
 
 const https = require('https');
 
+function parseAgents(result: any): any[] {
+  const rows = result?.results?.rows || [];
+  const cols = result?.results?.columns || [];
+  return rows.map((row: any[]) => {
+    const obj: any = {};
+    cols.forEach((c: string, i: number) => { obj[c] = row[i]; });
+    return {
+      id: obj.id, name: obj.name, slug: obj.slug, description: obj.description,
+      emoji: obj.emoji || '🤖', color: obj.color || 'blue', division: obj.division,
+      specialization: obj.specialization || '',
+      source: obj.source || 'local', status: obj.status || 'idle',
+      capabilities: JSON.parse(obj.capabilities || '[]'),
+      technicalSkills: JSON.parse(obj.technical_skills || '[]'),
+      personalityTraits: JSON.parse(obj.personality_traits || '[]'),
+      systemPrompt: obj.system_prompt || '',
+      model: JSON.parse(obj.model_config || '{"primary":"claude-3-opus","fallbacks":[]}'),
+      metrics: JSON.parse(obj.metrics || '{"tasksCompleted":0,"successRate":0,"avgResponseTime":0}'),
+    };
+  });
+}
+
 export async function GET() {
-  const data = JSON.stringify({ statements: ['SELECT * FROM agents LIMIT 3'] });
+  const data = JSON.stringify({ statements: ['SELECT * FROM agents ORDER BY division, name'] });
   
   const result = await new Promise((resolve) => {
     const req = https.request({
@@ -17,7 +38,7 @@ export async function GET() {
         'Authorization': `Bearer eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3Nzc1ODQzMDUsImlkIjoiMDE5ZGUwNDQtZTIwMS03MDIwLWE4M2MtZjc4OGVmNzdmYjc1IiwicmlkIjoiZGRmZjU0MzQtODI2Ni00YmY5LTgyYjYtMWYyNzM5MjljYmJiIn0.eOS1O1ZAt_w3LPQOs12kUU3HPC3FoOXutNWFN01gU1GhVo9eNDbu3HEUDSCTiVT1qm_mDlRc9jramm4dbT4VAA`,
         'Content-Length': Buffer.byteLength(data),
       },
-      timeout: 10000,
+      timeout: 15000,
     }, (res: any) => {
       let body = '';
       res.on('data', (chunk: any) => body += chunk);
@@ -32,9 +53,10 @@ export async function GET() {
     req.end();
   });
   
-  const response = NextResponse.json({ success: true, result });
-  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  response.headers.set('Pragma', 'no-cache');
-  response.headers.set('Expires', '0');
-  return response;
+  if (!result || result.error) {
+    return NextResponse.json({ error: result?.error || 'Request failed' }, { status: 500 });
+  }
+  
+  const agents = parseAgents(result);
+  return NextResponse.json(agents);
 }
