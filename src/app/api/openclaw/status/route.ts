@@ -16,10 +16,15 @@ export async function GET() {
     const config = getOpenClawConfig();
     
     // Auto-connect if enabled and not connected (don't await - let it run async)
+    console.log('[DEBUG] autoConnect:', config.autoConnect, 'state:', client.getState());
     if (config.autoConnect && client.getState() === 'disconnected') {
-      client.connect().catch((error) => {
-        console.error('Auto-connect failed:', error);
-      });
+      console.log('[DEBUG] Triggering auto-connect to', client.getConnectionInfo().host + ':' + client.getConnectionInfo().port);
+      client.connect()
+        .then(() => console.log('[DEBUG] Auto-connect SUCCESS'))
+        .catch((error) => {
+          console.error('[DEBUG] Auto-connect FAILED:', error.message);
+          console.error('[DEBUG] Stack:', error.stack);
+        });
     }
     
     const connectionInfo = client.getConnectionInfo();
@@ -87,11 +92,13 @@ export async function GET() {
 
   } catch (error) {
     console.error('Failed to get OpenClaw status:', error);
+    console.error('Stack:', error instanceof Error ? error.stack : 'no stack');
 
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to get status',
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
       },
       { status: 500 }
     );
