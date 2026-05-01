@@ -15,7 +15,19 @@ import { createChildLogger } from './logger';
 import type { DeviceIdentity } from '@/types';
 
 const logger = createChildLogger('device-identity');
-const IDENTITY_DIR = process.env.NETLIFY || process.env.CONTEXT ? '/tmp/.data' : '.data';
+// Determine data directory - prefer /tmp on restricted filesystems (Netlify serverless)
+let IDENTITY_DIR: string;
+try {
+  // Test if we can write to cwd/.data
+  const testDir = path.join(process.cwd(), '.data');
+  require('fs').mkdirSync(testDir, { recursive: true });
+  require('fs').writeFileSync(path.join(testDir, '.write-test'), 'test');
+  require('fs').unlinkSync(path.join(testDir, '.write-test'));
+  IDENTITY_DIR = '.data';
+} catch {
+  // Fall back to /tmp on read-only filesystems (Netlify serverless, AWS Lambda, etc.)
+  IDENTITY_DIR = '/tmp/.data';
+}
 const IDENTITY_PATH = path.join(process.cwd(), IDENTITY_DIR, 'device-identity.json');
 
 // =====================================================
