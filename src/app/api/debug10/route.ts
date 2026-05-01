@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  // Async endpoint - no network, just return a value
-  const result = await Promise.resolve('async_ok');
-  return NextResponse.json({ ok: result });
+  // Test simplest possible fetch
+  const resp = await fetch('https://httpbin.org/get', {
+    signal: AbortSignal.timeout(5000),
+  });
+  const data = await resp.json();
+  return NextResponse.json({ got: data.url });
 }
