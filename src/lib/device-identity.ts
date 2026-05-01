@@ -28,7 +28,10 @@ try {
   // Fall back to /tmp on read-only filesystems (Netlify serverless, AWS Lambda, etc.)
   IDENTITY_DIR = '/tmp/.data';
 }
-const IDENTITY_PATH = path.join(process.cwd(), IDENTITY_DIR, 'device-identity.json');
+// Use absolute path for /tmp, relative for .data
+const IDENTITY_PATH = IDENTITY_DIR.startsWith('/')
+  ? path.join(IDENTITY_DIR, 'device-identity.json')
+  : path.join(process.cwd(), IDENTITY_DIR, 'device-identity.json');
 
 // =====================================================
 // Base64 URL Encoding (matching OpenClaw)
