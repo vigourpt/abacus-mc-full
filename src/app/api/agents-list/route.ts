@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 const https = require('https');
 
 export async function GET() {
-  const data = JSON.stringify({ statements: ['SELECT * FROM agents LIMIT 12'] });
+  const data = JSON.stringify({ statements: ['SELECT * FROM agents LIMIT 1'] });
   
   const result = await new Promise((resolve: any) => {
     const req = https.request({
@@ -29,29 +29,5 @@ export async function GET() {
     req.write(data); req.end();
   });
   
-  if ((result as any).error) {
-    return NextResponse.json({ error: (result as any).error }, { status: 500 });
-  }
-  
-  const rows = (result as any)?.[0]?.results?.rows || [];
-  const cols = (result as any)?.[0]?.results?.columns || [];
-  
-  const agents = rows.map((row: any[]) => {
-    const obj: any = {};
-    cols.forEach((c: string, i: number) => { obj[c] = row[i]; });
-    return {
-      id: obj.id, name: obj.name, slug: obj.slug, description: obj.description,
-      emoji: obj.emoji || '🤖', color: obj.color || 'blue', division: obj.division,
-      specialization: obj.specialization || '', source: obj.source || 'local',
-      status: obj.status || 'idle',
-      capabilities: JSON.parse(obj.capabilities || '[]'),
-      technicalSkills: JSON.parse(obj.technical_skills || '[]'),
-      personalityTraits: JSON.parse(obj.personality_traits || '[]'),
-      systemPrompt: obj.system_prompt || '',
-      model: JSON.parse(obj.model_config || '{"primary":"claude-3-opus","fallbacks":[]}'),
-      metrics: JSON.parse(obj.metrics || '{"tasksCompleted":0}'),
-    };
-  });
-  
-  return NextResponse.json(agents);
+  return NextResponse.json(result);
 }
