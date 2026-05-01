@@ -16,7 +16,7 @@ export default function Home() {
       setLoading(true);
       try {
         // Fetch agents
-        const agentsRes = await fetch('/api/agent-list-v2');
+        const agentsRes = await fetch('/api/agents');
         if (agentsRes.ok) {
           const agents = await agentsRes.json();
           setAgents(agents);
