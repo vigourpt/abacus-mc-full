@@ -13,7 +13,6 @@ export async function GET() {
   const authToken = process.env.TURSO_AUTH_TOKEN || (tokenMatch ? tokenMatch[1] : '');
   const httpsUrl = tursoUrlFromLibsql(rawUrl);
   
-  // Try with createClient using https URL
   let createResult = 'not tested';
   let queryResult = 'not tested';
   
@@ -21,7 +20,7 @@ export async function GET() {
     try {
       const client = createClient({ url: httpsUrl, authToken });
       createResult = 'created';
-      const r = await client.execute('SELECT id, name FROM agents LIMIT 3');
+      const r = await client.execute('SELECT 1 as n');
       queryResult = `ok: ${r.rows.length} rows, cols: ${r.columns.join(',')}`;
     } catch (e: any) {
       createResult = `error: ${e.message.substring(0, 100)}`;
