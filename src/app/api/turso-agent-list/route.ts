@@ -44,7 +44,7 @@ export async function GET() {
           });
           resolve(NextResponse.json(agents));
         } catch (e: any) {
-          resolve(NextResponse.json({ error: `Parse error: ${e.message}` }, { status: 500 }));
+          resolve(NextResponse.json({ error: e.message }, { status: 500 }));
         }
       });
     });
