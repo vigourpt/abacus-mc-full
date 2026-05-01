@@ -3,9 +3,10 @@ import { NextResponse } from 'next/server';
 
 const https = require('https');
 
-async function queryTurso(sql: string): Promise<any> {
-  const data = JSON.stringify({ statements: [sql] });
-  return new Promise((resolve, reject) => {
+export async function GET() {
+  const data = JSON.stringify({ statements: ['SELECT COUNT(*) as count FROM agents'] });
+  
+  const result = await new Promise((resolve: any) => {
     const req = https.request({
       hostname: 'abacus-mc-vigourpt.aws-eu-west-1.turso.io',
       port: 443, path: '/', method: 'POST',
@@ -15,22 +16,18 @@ async function queryTurso(sql: string): Promise<any> {
         'Content-Length': Buffer.byteLength(data),
       },
       timeout: 15000,
-    }, (res: any) => { let b = ''; res.on('data', c => b += c); res.on('end', () => { try { resolve(JSON.parse(b)); } catch { resolve(null); } }); });
-    req.on('error', reject); req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    }, (res: any) => {
+      let body = '';
+      res.on('data', (chunk: any) => body += chunk);
+      res.on('end', () => {
+        try { resolve(JSON.parse(body)); }
+        catch (e) { resolve({ parseError: true }); }
+      });
+    });
+    req.on('error', (e: any) => resolve({ error: e.message }));
+    req.on('timeout', () => { req.destroy(); resolve({ error: 'timeout' }); });
     req.write(data); req.end();
   });
-}
-
-export async function GET() {
-  try {
-    const result = await queryTurso('SELECT COUNT(*) as count FROM agents');
-    const count = result?.[0]?.results?.rows?.[0]?.[0] ?? 0;
-    
-    return NextResponse.json({
-      status: 'healthy',
-      agents: count,
-    });
-  } catch (error) {
-    return NextResponse.json({ status: 'unhealthy', error: String(error) }, { status: 500 });
-  }
+  
+  return NextResponse.json(result);
 }
