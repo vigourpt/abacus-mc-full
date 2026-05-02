@@ -16,7 +16,7 @@ export default function Home() {
       setLoading(true);
       try {
         // Fetch agents
-        const agentsRes = await fetch('/api/robot-list');
+        const agentsRes = await fetch('/api/minimal-https');
         if (agentsRes.ok) {
           const agents = await agentsRes.json();
           setAgents(agents);
