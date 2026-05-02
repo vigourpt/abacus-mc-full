@@ -21,7 +21,7 @@ export async function GET() {
       res.on('data', (chunk: any) => body += chunk);
       res.on('end', () => {
         try { resolve(JSON.parse(body)); }
-        catch (e) { resolve({ parseError: true }); }
+        catch (e) { resolve({ parseError: true, raw: body.substring(0, 100) }); }
       });
     });
     req.on('error', (e: any) => resolve({ error: e.message }));
@@ -29,5 +29,31 @@ export async function GET() {
     req.write(data); req.end();
   });
   
-  return NextResponse.json(result);
+  // Debug: if we got an error, return it
+  if ((result as any).error || (result as any).parseError) {
+    return NextResponse.json(result);
+  }
+  
+  // Process the result like before
+  const rows = (result as any)?.[0]?.results?.rows || [];
+  const cols = (result as any)?.[0]?.results?.columns || [];
+  
+  const agents = rows.map((row: any[]) => {
+    const obj: any = {};
+    cols.forEach((c: string, i: number) => { obj[c] = row[i]; });
+    return {
+      id: obj.id, name: obj.name, slug: obj.slug, description: obj.description,
+      emoji: obj.emoji || '🤖', color: obj.color || 'blue', division: obj.division,
+      specialization: obj.specialization || '', source: obj.source || 'local',
+      status: obj.status || 'idle',
+      capabilities: JSON.parse(obj.capabilities || '[]'),
+      technicalSkills: JSON.parse(obj.technical_skills || '[]'),
+      personalityTraits: JSON.parse(obj.personality_traits || '[]'),
+      systemPrompt: obj.system_prompt || '',
+      model: JSON.parse(obj.model_config || '{"primary":"claude-3-opus","fallbacks":[]}'),
+      metrics: JSON.parse(obj.metrics || '{"tasksCompleted":0}'),
+    };
+  });
+  
+  return NextResponse.json(agents);
 }
