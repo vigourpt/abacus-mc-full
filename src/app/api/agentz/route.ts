@@ -29,12 +29,10 @@ export async function GET() {
     req.write(data); req.end();
   });
   
-  // Debug: if we got an error, return it
   if ((result as any).error || (result as any).parseError) {
     return NextResponse.json(result);
   }
   
-  // Process the result like before
   const rows = (result as any)?.[0]?.results?.rows || [];
   const cols = (result as any)?.[0]?.results?.columns || [];
   
