@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 const https = require('https');
 
 export async function GET() {
-  const data = JSON.stringify({ statements: ['SELECT * FROM agents LIMIT 1'] });
+  const data = JSON.stringify({ statements: ['SELECT * FROM agents LIMIT 3'] });
   
   const result = await new Promise((resolve: any) => {
     const req = https.request({
