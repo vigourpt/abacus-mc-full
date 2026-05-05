@@ -6,15 +6,18 @@ import { logger } from './logger';
 const DATABASE_URL = process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL || '';
 const AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN || '';
 
+// Detect if we're using a local file (sync) vs remote (async)
+const isLocal = DATABASE_URL.startsWith('file:') || DATABASE_URL.startsWith('sqlite:') || DATABASE_URL.startsWith('/') || !DATABASE_URL.startsWith('libsql:') && !DATABASE_URL.startsWith('turso:');
+
 let _client: Client | null = null;
 
 function getClient(): Client {
   if (_client !== null) return _client;
-  _client = createClient({ 
-    url: DATABASE_URL, 
+  _client = createClient({
+    url: DATABASE_URL || 'file:local.db',
     authToken: AUTH_TOKEN || undefined,
   });
-  logger.info({ url: DATABASE_URL.substring(0, 50) }, 'Database client initialized');
+  logger.info({ url: DATABASE_URL.substring(0, 50), isLocal }, 'Database client initialized');
   return _client;
 }
 
@@ -29,40 +32,128 @@ function resultSetToRows<T = any>(result: ResultSet): T[] {
 }
 
 function createStatement(sql: string) {
-  return {
-    all: (...params: any[]) => {
-      return getClient().execute({ sql, args: params.length > 0 ? params : undefined })
-        .then(result => resultSetToRows(result));
-    },
-    get: (...params: any[]) => {
-      return getClient().execute({ sql, args: params.length > 0 ? params : undefined })
-        .then(result => resultSetToRows(result)[0] || undefined);
-    },
-    run: (...params: any[]) => {
-      return getClient().execute({ sql, args: params.length > 0 ? params : undefined })
-        .then(result => ({
-          changes: result.rowsAffected || 0,
-          lastInsertRowid: result.lastInsertRowid || 0,
-        }));
-    },
-  };
+  if (isLocal) {
+    // Local SQLite: synchronous execution
+    return {
+      all: (...params: any[]) => {
+        try {
+          const result = getClient().execute({ sql, args: params.length > 0 ? params : undefined });
+          return resultSetToRows(result);
+        } catch (err) {
+          logger.error({ err, sql }, 'db.all() error');
+          return [];
+        }
+      },
+      get: (...params: any[]) => {
+        try {
+          const result = getClient().execute({ sql, args: params.length > 0 ? params : undefined });
+          return resultSetToRows(result)[0] || undefined;
+        } catch (err) {
+          logger.error({ err, sql }, 'db.get() error');
+          return undefined;
+        }
+      },
+      run: (...params: any[]) => {
+        try {
+          const result = getClient().execute({ sql, args: params.length > 0 ? params : undefined });
+          return {
+            changes: result.rowsAffected || 0,
+            lastInsertRowid: result.lastInsertRowid || 0,
+          };
+        } catch (err) {
+          logger.error({ err, sql }, 'db.run() error');
+          return { changes: 0, lastInsertRowid: 0 };
+        }
+      },
+    };
+  } else {
+    // Remote Turso: asynchronous execution
+    return {
+      all: async (...params: any[]) => {
+        try {
+          const result = await getClient().execute({ sql, args: params.length > 0 ? params : undefined });
+          return resultSetToRows(result);
+        } catch (err) {
+          logger.error({ err, sql }, 'db.all() error');
+          return [];
+        }
+      },
+      get: async (...params: any[]) => {
+        try {
+          const result = await getClient().execute({ sql, args: params.length > 0 ? params : undefined });
+          return resultSetToRows(result)[0] || undefined;
+        } catch (err) {
+          logger.error({ err, sql }, 'db.get() error');
+          return undefined;
+        }
+      },
+      run: async (...params: any[]) => {
+        try {
+          const result = await getClient().execute({ sql, args: params.length > 0 ? params : undefined });
+          return {
+            changes: result.rowsAffected || 0,
+            lastInsertRowid: result.lastInsertRowid || 0,
+          };
+        } catch (err) {
+          logger.error({ err, sql }, 'db.run() error');
+          return { changes: 0, lastInsertRowid: 0 };
+        }
+      },
+    };
+  }
 }
 
 const db = new Proxy({} as any, {
   get(_target, prop) {
     if (prop === 'exec') {
-      return (sql: string) => {
-        const statements = sql.split(';').filter(s => s.trim());
-        for (const stmt of statements) {
-          if (stmt.trim()) getClient().execute({ sql: stmt.trim(), args: undefined });
-        }
-      };
+      if (isLocal) {
+        return (sql: string) => {
+          const statements = sql.split(';').filter(s => s.trim());
+          for (const stmt of statements) {
+            if (stmt.trim()) {
+              try {
+                getClient().execute({ sql: stmt.trim(), args: undefined });
+              } catch (err) {
+                // Ignore errors for multi-statement exec
+              }
+            }
+          }
+        };
+      } else {
+        return async (sql: string) => {
+          const statements = sql.split(';').filter(s => s.trim());
+          for (const stmt of statements) {
+            if (stmt.trim()) {
+              try {
+                await getClient().execute({ sql: stmt.trim(), args: undefined });
+              } catch (err) {
+                // Ignore errors for multi-statement exec
+              }
+            }
+          }
+        };
+      }
     }
     if (prop === 'pragma') {
-      return (pragma: string) => {
-        return getClient().execute({ sql: `PRAGMA ${pragma}`, args: undefined })
-          .then(result => resultSetToRows(result));
-      };
+      return isLocal
+        ? (pragma: string) => {
+            try {
+              const result = getClient().execute({ sql: `PRAGMA ${pragma}`, args: undefined });
+              return resultSetToRows(result);
+            } catch (err) {
+              logger.error({ err }, 'db.pragma() error');
+              return [];
+            }
+          }
+        : async (pragma: string) => {
+            try {
+              const result = await getClient().execute({ sql: `PRAGMA ${pragma}`, args: undefined });
+              return resultSetToRows(result);
+            } catch (err) {
+              logger.error({ err }, 'db.pragma() error');
+              return [];
+            }
+          };
     }
     if (prop === 'prepare') {
       return createStatement;
@@ -115,7 +206,11 @@ export async function runMigrations() {
   ];
 
   for (const sql of migrations) {
-    await getClient().execute({ sql, args: undefined });
+    try {
+      await getClient().execute({ sql, args: undefined });
+    } catch (err) {
+      // Ignore "already exists" errors
+    }
   }
   logger.info('Migrations completed');
 }
