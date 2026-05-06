@@ -15,27 +15,24 @@ export async function GET() {
     const client = getOpenClawClient();
     const config = getOpenClawConfig();
     
-    // Auto-connect if enabled and not connected (don't await - let it run async)
-    console.log('[DEBUG] autoConnect:', config.autoConnect, 'state:', client.getState());
+    // Auto-connect if enabled and not connected
     if (config.autoConnect && client.getState() === 'disconnected') {
-      console.log('[DEBUG] Triggering auto-connect to', client.getConnectionInfo().host + ':' + client.getConnectionInfo().port);
       client.connect()
         .then(() => console.log('[DEBUG] Auto-connect SUCCESS'))
         .catch((error) => {
           console.error('[DEBUG] Auto-connect FAILED:', error.message);
-          console.error('[DEBUG] Stack:', error.stack);
         });
     }
     
     const connectionInfo = client.getConnectionInfo();
 
-    // Get agent statistics
-    const agentsBySource = getAgentCountBySource();
-    const agentsByDivision = getAgentCountByDivision();
+    // Get agent statistics (these are async for Turso)
+    const agentsBySource = await getAgentCountBySource();
+    const agentsByDivision = await getAgentCountByDivision();
     const totalAgents = Object.values(agentsBySource).reduce((a, b) => a + b, 0);
 
     // Get message statistics
-    const messageStats = db.prepare(`
+    const messageStmt = db.prepare(`
       SELECT 
         COUNT(*) as total,
         SUM(CASE WHEN type = 'request' THEN 1 ELSE 0 END) as requests,
@@ -43,17 +40,19 @@ export async function GET() {
         SUM(CASE WHEN read = 0 THEN 1 ELSE 0 END) as unread
       FROM agent_messages
       WHERE created_at > datetime('now', '-24 hours')
-    `).get() as { total: number; requests: number; responses: number; unread: number };
+    `);
+    const messageStats = await messageStmt.get() as { total: number; requests: number; responses: number; unread: number } || { total: 0, requests: 0, responses: 0, unread: 0 };
 
     // Get task statistics
-    const taskStats = db.prepare(`
+    const taskStmt = db.prepare(`
       SELECT 
         COUNT(*) as total,
         SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as inProgress,
         SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) as completed
       FROM tasks
       WHERE created_at > datetime('now', '-24 hours')
-    `).get() as { total: number; inProgress: number; completed: number };
+    `);
+    const taskStats = await taskStmt.get() as { total: number; inProgress: number; completed: number } || { total: 0, inProgress: 0, completed: 0 };
 
     return NextResponse.json({
       success: true,
@@ -92,13 +91,11 @@ export async function GET() {
 
   } catch (error) {
     console.error('Failed to get OpenClaw status:', error);
-    console.error('Stack:', error instanceof Error ? error.stack : 'no stack');
 
     return NextResponse.json(
       {
         success: false,
         error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
       },
       { status: 500 }
     );

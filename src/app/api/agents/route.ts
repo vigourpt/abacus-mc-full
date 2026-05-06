@@ -12,7 +12,7 @@ import type { Agent, AgentRow } from '@/types';
 export async function GET() {
   try {
     const stmt = db.prepare('SELECT * FROM agents ORDER BY division, name');
-    const rows = stmt.all() as AgentRow[];
+    const rows = await stmt.all() as AgentRow[];
 
     const agents = rows.map(rowToAgent);
     return NextResponse.json(agents);
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    stmt.run(
+    await stmt.run(
       id,
       body.name,
       slug,
@@ -64,7 +64,11 @@ export async function POST(request: NextRequest) {
 
     // Fetch the created agent
     const getStmt = db.prepare('SELECT * FROM agents WHERE id = ?');
-    const row = getStmt.get(id) as AgentRow;
+    const row = await getStmt.get(id) as AgentRow | undefined;
+
+    if (!row) {
+      return NextResponse.json({ error: 'Agent created but not found' }, { status: 201 });
+    }
 
     return NextResponse.json(rowToAgent(row), { status: 201 });
   } catch (error) {

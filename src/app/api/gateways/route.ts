@@ -24,7 +24,7 @@ interface GatewayRow {
 export async function GET() {
   try {
     const stmt = db.prepare('SELECT * FROM gateway_connections ORDER BY created_at DESC');
-    const rows = stmt.all() as GatewayRow[];
+    const rows = await stmt.all() as GatewayRow[];
 
     // Get actual connection state from OpenClaw client
     const openclawClient = getOpenClawClient();
@@ -33,19 +33,16 @@ export async function GET() {
 
     // Merge database records with actual connection state
     const gateways = rows.map(row => {
-      // Check if this gateway matches the current client connection
       const isCurrentGateway = row.host === clientState.host && row.port === clientState.port;
       
       return {
         ...rowToGateway(row),
-        // Use actual connection state if this is the current gateway
         status: isCurrentGateway && isActuallyConnected ? 'connected' as const : (row.status as GatewayConnection['status']),
         lastConnected: isCurrentGateway && isActuallyConnected ? new Date() : row.last_connected,
         deviceIdentity: isCurrentGateway && isActuallyConnected ? clientState.deviceIdentity : (row.device_identity ? JSON.parse(row.device_identity) : undefined),
       };
     });
 
-    // Return as array for easy consumption by frontend
     return NextResponse.json(gateways);
   } catch (error) {
     console.error('Failed to fetch gateways:', error);
@@ -66,12 +63,16 @@ export async function POST(request: NextRequest) {
     `);
 
     const host = body.host || process.env.OPENCLAW_GATEWAY_HOST || '127.0.0.1';
-    const port = body.port || parseInt(process.env.OPENCLAW_GATEWAY_PORT || '18789');
+    const port = body.port || parseInt(process.env.OPENCLAW_GATEWAY_PORT || '45397');
 
-    stmt.run(id, host, port);
+    await stmt.run(id, host, port);
 
     const getStmt = db.prepare('SELECT * FROM gateway_connections WHERE id = ?');
-    const row = getStmt.get(id) as GatewayRow;
+    const row = await getStmt.get(id) as GatewayRow | undefined;
+
+    if (!row) {
+      return NextResponse.json({ error: 'Gateway created but not found' }, { status: 201 });
+    }
 
     return NextResponse.json(rowToGateway(row), { status: 201 });
   } catch (error) {
