@@ -76,8 +76,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(rowToGateway(row), { status: 201 });
   } catch (error) {
     console.error('Failed to create gateway:', error);
+    const message = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: 'Failed to create gateway' },
+      { error: 'Failed to create gateway', details: message },
       { status: 500 }
     );
   }
