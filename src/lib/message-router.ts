@@ -126,7 +126,7 @@ export class MessageRouter extends EventEmitter {
   /**
    * Unregister an agent handler
    */
-  unregisterAgentHandler(agentSlug: string): void {
+  async unregisterAgentHandler(agentSlug: string): Promise<void> {
     this.messageHandlers.delete(agentSlug);
     logger.info({ agentSlug }, 'Agent handler unregistered');
   }

@@ -24,7 +24,7 @@ interface GatewayRow {
 export async function GET() {
   try {
     const stmt = db.prepare('SELECT * FROM gateway_connections ORDER BY created_at DESC');
-    const rows = await await await stmt.all() as GatewayRow[];
+    const rows = await await stmt.all() as GatewayRow[];
 
     // Get actual connection state from OpenClaw client
     const openclawClient = getOpenClawClient();

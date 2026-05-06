@@ -17,7 +17,7 @@ interface GatewayRow {
 export async function POST() {
   try {
     const stmt = db.prepare('SELECT * FROM gateway_connections ORDER BY created_at DESC');
-    const gateways = await await await stmt.all() as GatewayRow[];
+    const gateways = await await stmt.all() as GatewayRow[];
 
     if (gateways.length === 0) {
       return NextResponse.json({

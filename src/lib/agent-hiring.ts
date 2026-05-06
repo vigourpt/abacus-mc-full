@@ -445,7 +445,7 @@ export class AgentHiringFramework {
   /**
    * Check if existing agents can handle the task with enhanced matching
    */
-  async findMatchingAgents(requiredCapabilities: string[]): Promise< > {
+  async findMatchingAgents(requiredCapabilities: string[]): Promise<TaskAgentMatch[]> {
     const stmt = db.prepare(`
       SELECT * FROM agents 
       WHERE status IN ('idle', 'active', 'busy')
@@ -908,7 +908,7 @@ When working with other agents:
   /**
    * Reject hiring request
    */
-  rejectHiring(requestId: string, rejectedBy?: string): boolean {
+  async rejectHiring(requestId: string, rejectedBy?: string): Promise<boolean> {
     const stmt = db.prepare(`
       UPDATE hiring_requests 
       SET status = 'rejected', approved_by = ?
