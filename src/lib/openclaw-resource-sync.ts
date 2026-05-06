@@ -495,7 +495,7 @@ export function initializeResourceTables(): void {
  */
 export function getSyncedSkills(): OpenClawSkill[] {
   const stmt = db.prepare('SELECT * FROM openclaw_skills ORDER BY name');
-  const rows = stmt.all() as any[];
+  const rows = await await await stmt.all() as any[];
   
   return rows.map(row => ({
     id: row.id,
@@ -514,7 +514,7 @@ export function getSyncedSkills(): OpenClawSkill[] {
  */
 export function getSyncedTools(): OpenClawTool[] {
   const stmt = db.prepare('SELECT * FROM openclaw_tools ORDER BY name');
-  const rows = stmt.all() as any[];
+  const rows = await await await stmt.all() as any[];
   
   return rows.map(row => ({
     id: row.id,
@@ -531,7 +531,7 @@ export function getSyncedTools(): OpenClawTool[] {
  */
 export function getSyncedModels(): OpenClawModel[] {
   const stmt = db.prepare('SELECT * FROM openclaw_models ORDER BY provider, name');
-  const rows = stmt.all() as any[];
+  const rows = await await await stmt.all() as any[];
   
   return rows.map(row => ({
     id: row.id,

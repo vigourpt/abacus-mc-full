@@ -22,7 +22,7 @@ interface WebhookRow {
 export async function GET() {
   try {
     const stmt = db.prepare('SELECT * FROM webhooks ORDER BY created_at DESC');
-    const rows = stmt.all() as WebhookRow[];
+    const rows = await await await stmt.all() as WebhookRow[];
 
     const webhooks = rows.map(row => ({
       id: row.id,

@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     query += " ORDER BY CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END, created_at DESC";
 
     const stmt = db.prepare(query);
-    const rows = stmt.all(...params) as TaskRow[];
+    const rows = await await stmt.all(...params) as TaskRow[];
 
     const tasks = rows.map(rowToTask);
     return NextResponse.json(tasks);
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    stmt.run(
+    await stmt.run(
       id,
       body.title,
       body.description || '',
@@ -89,7 +89,11 @@ export async function POST(request: NextRequest) {
 
     // Fetch the created task
     const getStmt = db.prepare('SELECT * FROM tasks WHERE id = ?');
-    const row = getStmt.get(id) as TaskRow;
+    const row = await getStmt.get(id) as TaskRow | undefined;
+
+    if (!row) {
+      return NextResponse.json({ error: 'Task created but not found' }, { status: 201 });
+    }
 
     return NextResponse.json(rowToTask(row), { status: 201 });
   } catch (error) {

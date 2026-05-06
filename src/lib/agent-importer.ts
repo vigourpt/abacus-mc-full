@@ -680,7 +680,7 @@ ${agent.systemPrompt}
       LIMIT ?
     `);
 
-    const rows = stmt.all(limit) as Array<{
+    const rows = await stmt.all(limit) as Array<{
       id: string;
       source: string;
       source_url: string | null;
@@ -708,7 +708,7 @@ ${agent.systemPrompt}
    */
   getAgentsByDivision(division: string): Agent[] {
     const stmt = db.prepare('SELECT * FROM agents WHERE division = ?');
-    const rows = stmt.all(division) as AgentRow[];
+    const rows = await stmt.all(division) as AgentRow[];
     return rows.map(this.rowToAgent);
   }
 
@@ -717,7 +717,7 @@ ${agent.systemPrompt}
    */
   getAgentsBySource(source: AgentSource): Agent[] {
     const stmt = db.prepare('SELECT * FROM agents WHERE source = ?');
-    const rows = stmt.all(source) as AgentRow[];
+    const rows = await stmt.all(source) as AgentRow[];
     return rows.map(this.rowToAgent);
   }
 

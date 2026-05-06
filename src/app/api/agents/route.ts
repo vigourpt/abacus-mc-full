@@ -12,7 +12,7 @@ import type { Agent, AgentRow } from '@/types';
 export async function GET() {
   try {
     const stmt = db.prepare('SELECT * FROM agents ORDER BY division, name');
-    const rows = await stmt.all() as AgentRow[];
+    const rows = await await await stmt.all() as AgentRow[];
 
     const agents = rows.map(rowToAgent);
     return NextResponse.json(agents);

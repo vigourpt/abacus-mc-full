@@ -452,7 +452,7 @@ export class AgentHiringFramework {
       ORDER BY 
         CASE status WHEN 'idle' THEN 1 WHEN 'active' THEN 2 ELSE 3 END
     `);
-    const rows = stmt.all() as AgentRow[];
+    const rows = await await await stmt.all() as AgentRow[];
 
     const matchingAgents: Agent[] = [];
     const scores = new Map<string, number>();
@@ -929,7 +929,7 @@ When working with other agents:
         CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END,
         created_at DESC
     `);
-    const rows = stmt.all() as Array<{
+    const rows = await await await stmt.all() as Array<{
       id: string;
       task_id: string;
       required_capabilities: string;

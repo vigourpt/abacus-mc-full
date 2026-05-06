@@ -217,7 +217,7 @@ export class TaskPlanner {
         CASE a.status WHEN 'idle' THEN 1 WHEN 'active' THEN 2 ELSE 3 END,
         active_tasks ASC
     `);
-    const rows = stmt.all() as (AgentRow & { active_tasks: number })[];
+    const rows = await await await stmt.all() as (AgentRow & { active_tasks: number })[];
     return rows.map(row => this.rowToAgent(row));
   }
 
@@ -689,7 +689,7 @@ export class TaskPlanner {
     const stmt = db.prepare(`
       SELECT * FROM task_dependencies WHERE task_id = ?
     `);
-    const rows = stmt.all(taskId) as Array<{
+    const rows = await stmt.all(taskId) as Array<{
       id: string;
       task_id: string;
       depends_on_task_id: string;
@@ -749,7 +749,7 @@ export class TaskPlanner {
     `;
 
     const stmt = db.prepare(query);
-    const rows = (agentId ? stmt.all(agentId) : stmt.all()) as TaskRow[];
+    const rows = (agentId ? await stmt.all(agentId) : await await await stmt.all()) as TaskRow[];
 
     // Filter tasks that can start
     return rows

@@ -409,7 +409,7 @@ export async function getAgentCountBySource(): Promise<Record<string, number>> {
     const stmt = db.prepare(`
       SELECT source, COUNT(*) as count FROM agents GROUP BY source
     `);
-    const rows = await stmt.all() as Array<{ source: string; count: number }>;
+    const rows = await await await stmt.all() as Array<{ source: string; count: number }>;
     
     return rows.reduce((acc, row) => {
       acc[row.source || 'local'] = row.count;
@@ -429,7 +429,7 @@ export async function getAgentCountByDivision(): Promise<Record<string, number>>
     const stmt = db.prepare(`
       SELECT division, COUNT(*) as count FROM agents GROUP BY division
     `);
-    const rows = await stmt.all() as Array<{ division: string; count: number }>;
+    const rows = await await await stmt.all() as Array<{ division: string; count: number }>;
     
     return rows.reduce((acc, row) => {
       acc[row.division] = row.count;
