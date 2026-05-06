@@ -7,7 +7,9 @@ const DATABASE_URL = process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL 
 const AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN || '';
 
 // Detect if we're using a local file (sync) vs remote (async)
-const isLocal = DATABASE_URL.startsWith('file:') || DATABASE_URL.startsWith('sqlite:') || DATABASE_URL.startsWith('/') || !DATABASE_URL.startsWith('libsql:') && !DATABASE_URL.startsWith('turso:');
+// Remote: libsql://, turso://, or ws:// (Turso can use WebSocket URLs)
+const isRemote = DATABASE_URL.startsWith('libsql://') || DATABASE_URL.startsWith('turso://') || DATABASE_URL.startsWith('ws://') || DATABASE_URL.startsWith('wss://');
+const isLocal = !isRemote;
 
 let _client: Client | null = null;
 
