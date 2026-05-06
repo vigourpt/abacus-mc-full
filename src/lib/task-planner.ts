@@ -124,7 +124,7 @@ export class TaskPlanner {
     logger.debug({ taskType, complexity }, 'Task classified');
 
     // Get available agents
-    const agents = this.getAvailableAgents();
+    const agents = await this.getAvailableAgents();
     
     // Score each agent for this task
     const matches = this.scoreAgents(task, taskType, complexity, agents);
@@ -207,7 +207,7 @@ export class TaskPlanner {
   /**
    * Get available agents from database with workload information
    */
-  private getAvailableAgents(): Agent[] {
+  private async getAvailableAgents(): Promise<Agent[]> {
     const stmt = db.prepare(`
       SELECT a.*, 
         (SELECT COUNT(*) FROM tasks t WHERE t.assigned_to = a.id AND t.status IN ('todo', 'in_progress')) as active_tasks
