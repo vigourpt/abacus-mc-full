@@ -445,14 +445,14 @@ export class AgentHiringFramework {
   /**
    * Check if existing agents can handle the task with enhanced matching
    */
-  findMatchingAgents(requiredCapabilities: string[]): { agents: Agent[]; scores: Map<string, number> } {
+  async findMatchingAgents(requiredCapabilities: string[]): Promise< > {
     const stmt = db.prepare(`
       SELECT * FROM agents 
       WHERE status IN ('idle', 'active', 'busy')
       ORDER BY 
         CASE status WHEN 'idle' THEN 1 WHEN 'active' THEN 2 ELSE 3 END
     `);
-    const rows = await await await stmt.all() as AgentRow[];
+    const rows = await stmt.all() as AgentRow[];
 
     const matchingAgents: Agent[] = [];
     const scores = new Map<string, number>();
@@ -922,14 +922,14 @@ When working with other agents:
   /**
    * Get all pending hiring requests
    */
-  getPendingRequests(): HiringRequest[] {
+  async getPendingRequests(): Promise<HiringRequest[] > {
     const stmt = db.prepare(`
       SELECT * FROM hiring_requests WHERE status = 'pending'
       ORDER BY 
         CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END,
         created_at DESC
     `);
-    const rows = await await await stmt.all() as Array<{
+    const rows = await stmt.all() as Array<{
       id: string;
       task_id: string;
       required_capabilities: string;

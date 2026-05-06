@@ -673,7 +673,7 @@ ${agent.systemPrompt}
   /**
    * Get import history
    */
-  getImportHistory(limit = 20): ImportHistory[] {
+  async getImportHistory(limit = 20): Promise<ImportHistory[] > {
     const stmt = db.prepare(`
       SELECT * FROM import_history 
       ORDER BY created_at DESC 
@@ -706,7 +706,7 @@ ${agent.systemPrompt}
   /**
    * Get agents by division
    */
-  getAgentsByDivision(division: string): Agent[] {
+  async getAgentsByDivision(division: string): Promise<Agent[] > {
     const stmt = db.prepare('SELECT * FROM agents WHERE division = ?');
     const rows = await stmt.all(division) as AgentRow[];
     return rows.map(this.rowToAgent);
@@ -715,7 +715,7 @@ ${agent.systemPrompt}
   /**
    * Get agents by source
    */
-  getAgentsBySource(source: AgentSource): Agent[] {
+  async getAgentsBySource(source: AgentSource): Promise<Agent[] > {
     const stmt = db.prepare('SELECT * FROM agents WHERE source = ?');
     const rows = await stmt.all(source) as AgentRow[];
     return rows.map(this.rowToAgent);

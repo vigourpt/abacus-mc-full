@@ -493,9 +493,9 @@ export function initializeResourceTables(): void {
 /**
  * Get all synced skills
  */
-export function getSyncedSkills(): OpenClawSkill[] {
+export async function getSyncedSkills(): OpenClawSkill[] {
   const stmt = db.prepare('SELECT * FROM openclaw_skills ORDER BY name');
-  const rows = await await await stmt.all() as any[];
+  const rows = await stmt.all() as any[];
   
   return rows.map(row => ({
     id: row.id,
@@ -512,9 +512,9 @@ export function getSyncedSkills(): OpenClawSkill[] {
 /**
  * Get all synced tools
  */
-export function getSyncedTools(): OpenClawTool[] {
+export async function getSyncedTools(): OpenClawTool[] {
   const stmt = db.prepare('SELECT * FROM openclaw_tools ORDER BY name');
-  const rows = await await await stmt.all() as any[];
+  const rows = await stmt.all() as any[];
   
   return rows.map(row => ({
     id: row.id,
@@ -529,9 +529,9 @@ export function getSyncedTools(): OpenClawTool[] {
 /**
  * Get all synced models
  */
-export function getSyncedModels(): OpenClawModel[] {
+export async function getSyncedModels(): OpenClawModel[] {
   const stmt = db.prepare('SELECT * FROM openclaw_models ORDER BY provider, name');
-  const rows = await await await stmt.all() as any[];
+  const rows = await stmt.all() as any[];
   
   return rows.map(row => ({
     id: row.id,
@@ -549,7 +549,7 @@ export function getSyncedModels(): OpenClawModel[] {
 /**
  * Get counts of synced resources
  */
-export function getResourceCounts(): { skills: number; tools: number; models: number } {
+export async function getResourceCounts(): { skills: number; tools: number; models: number } {
   const skillsCount = (db.prepare('SELECT COUNT(*) as count FROM openclaw_skills').get() as any).count;
   const toolsCount = (db.prepare('SELECT COUNT(*) as count FROM openclaw_tools').get() as any).count;
   const modelsCount = (db.prepare('SELECT COUNT(*) as count FROM openclaw_models').get() as any).count;

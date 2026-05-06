@@ -217,7 +217,7 @@ export class TaskPlanner {
         CASE a.status WHEN 'idle' THEN 1 WHEN 'active' THEN 2 ELSE 3 END,
         active_tasks ASC
     `);
-    const rows = await await await stmt.all() as (AgentRow & { active_tasks: number })[];
+    const rows = await stmt.all() as (AgentRow & { active_tasks: number })[];
     return rows.map(row => this.rowToAgent(row));
   }
 
@@ -685,7 +685,7 @@ export class TaskPlanner {
   /**
    * Get task dependencies
    */
-  getTaskDependencies(taskId: string): TaskDependency[] {
+  async getTaskDependencies(taskId: string): Promise<TaskDependency[] > {
     const stmt = db.prepare(`
       SELECT * FROM task_dependencies WHERE task_id = ?
     `);
@@ -730,7 +730,7 @@ export class TaskPlanner {
   /**
    * Get priority queue of tasks ready to start
    */
-  getPriorityQueue(agentId?: string): Task[] {
+  async getPriorityQueue(agentId?: string): Promise<Task[] > {
     let query = `
       SELECT t.* FROM tasks t
       WHERE t.status IN ('todo', 'backlog')
@@ -749,7 +749,7 @@ export class TaskPlanner {
     `;
 
     const stmt = db.prepare(query);
-    const rows = (agentId ? await stmt.all(agentId) : await await await stmt.all()) as TaskRow[];
+    const rows = (agentId ? await stmt.all(agentId) : await stmt.all()) as TaskRow[];
 
     // Filter tasks that can start
     return rows
