@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     query += ' ORDER BY created_at DESC';
     
     const stmt = db.prepare(query);
-    const rows = params.length > 0 ? await stmt.all(...params) : await await stmt.all();
+    const rows = params.length > 0 ? await stmt.all(...params) : await stmt.all();
     
     const requests = rows.map((row: any) => ({
       id: row.id,

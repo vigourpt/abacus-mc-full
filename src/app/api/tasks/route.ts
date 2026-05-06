@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     query += " ORDER BY CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END, created_at DESC";
 
     const stmt = db.prepare(query);
-    const rows = await await stmt.all(...params) as TaskRow[];
+    const rows = await stmt.all(...params) as TaskRow[];
 
     const tasks = rows.map(rowToTask);
     return NextResponse.json(tasks);
